@@ -486,9 +486,9 @@ function createAppEventItem(event) {
   const div = document.createElement('div');
   div.className = 'app-event-item';
 
+  // Convert UTC to local time
+  const { mmdd, time } = formatLocalTime(event.timestamp);
   const dt = new Date(event.timestamp);
-  const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
-  const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
   // Calculate days since event (date only, not time)
   const today = new Date();
