@@ -1,7 +1,7 @@
 // Vercel serverless function to fetch sensor data from Home Assistant
 // This keeps the token server-side and handles CORS
 
-export default async function handler(req, res) {
+export default async function (req, res) {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
