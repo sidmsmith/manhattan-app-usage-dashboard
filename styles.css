@@ -44,8 +44,8 @@ body {
 .summary-header {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 20px;
   margin-bottom: 0;
 }
 
@@ -83,7 +83,7 @@ body {
   background-size: 12px;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  margin-left: -40px;
+  margin-left: 0;
 }
 
 .sort-dropdown:hover {
@@ -242,10 +242,6 @@ body {
   font-size: 1.2rem;
   font-weight: 600;
   margin-bottom: 15px;
-}
-
-.app-card[data-app="facility_addresses"] .app-card-header {
-  font-weight: 400;
 }
 
 .app-card[data-app="facility_addresses"] .app-card-header {
