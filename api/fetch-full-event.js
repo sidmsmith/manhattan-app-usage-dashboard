@@ -88,11 +88,21 @@ export default async function (req, res) {
         timestamp: sensorData.attributes?.timestamp
       });
     } else {
+      // Return more debugging info
       return res.status(200).json({
         success: false,
         message: 'Event not found',
         sensor_state: sensorData.state,
-        attributes: sensorData.attributes
+        attributes: sensorData.attributes,
+        debug: {
+          requested_timestamp: timestamp,
+          requested_event_name: event_name,
+          requested_app_name: app_name,
+          sensor_timestamp: sensorData.attributes?.timestamp,
+          sensor_event_name: sensorData.attributes?.event_name,
+          sensor_app_name: sensorData.attributes?.app_name,
+          error: sensorData.attributes?.error
+        }
       });
     }
     
