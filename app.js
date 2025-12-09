@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.0.20';
+const DASHBOARD_VERSION = '0.1.1';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSortOrder();
   initializeSortable();
   setupEventListeners();
+  setupModalListeners();
   loadDashboardData();
   setInterval(loadDashboardData, CONFIG.refreshInterval);
 });
@@ -288,6 +289,14 @@ function createEventItem(event) {
   const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
   const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
+  // Store full event data for modal
+  div.dataset.eventData = JSON.stringify(event);
+
+  // Add click handler to open modal
+  div.addEventListener('click', () => {
+    openEventModal(event);
+  });
+
   const appShort = getAppShortName(event.app_name);
   const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   const org = event.org || 'N/A';
@@ -485,6 +494,14 @@ function createAppEventItem(event) {
     div.classList.add('event-old');
   }
 
+  // Store full event data for modal
+  div.dataset.eventData = JSON.stringify(event);
+
+  // Add click handler to open modal
+  div.addEventListener('click', () => {
+    openEventModal(event);
+  });
+
   const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   const org = event.org || 'N/A';
 
@@ -498,4 +515,64 @@ function showError(message) {
   if (container) {
     container.innerHTML = `<div class="loading-message" style="color: red;">${message}</div>`;
   }
+}
+
+// Open event modal with event data
+function openEventModal(event) {
+  const modal = document.getElementById('eventModal');
+  const modalBody = document.getElementById('eventModalBody');
+  
+  if (!modal || !modalBody) return;
+
+  // Format and display the event data
+  const formattedJson = formatEventJson(event);
+  modalBody.innerHTML = `<div class="event-json-viewer">${formattedJson}</div>`;
+  
+  // Show modal
+  modal.classList.add('show');
+  
+  // Close on background click
+  modal.addEventListener('click', function closeOnBackground(e) {
+    if (e.target === modal) {
+      closeEventModal();
+      modal.removeEventListener('click', closeOnBackground);
+    }
+  });
+}
+
+// Close event modal
+function closeEventModal() {
+  const modal = document.getElementById('eventModal');
+  if (modal) {
+    modal.classList.remove('show');
+  }
+}
+
+// Format event JSON for display
+function formatEventJson(event) {
+  // Create a nicely formatted JSON string
+  const formatted = JSON.stringify(event, null, 2);
+  
+  // Apply syntax highlighting
+  return formatted
+    .replace(/("[\w]+"):/g, '<span class="event-json-key">$1</span>:')
+    .replace(/: ("[^"]*")/g, ': <span class="event-json-string">$1</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span class="event-json-number">$1</span>')
+    .replace(/: (true|false)/g, ': <span class="event-json-boolean">$1</span>')
+    .replace(/: null/g, ': <span class="event-json-null">null</span>');
+}
+
+// Setup modal listeners
+function setupModalListeners() {
+  const closeBtn = document.getElementById('eventModalClose');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeEventModal);
+  }
+  
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeEventModal();
+    }
+  });
 }
