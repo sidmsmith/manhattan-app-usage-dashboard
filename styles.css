@@ -310,8 +310,8 @@ body {
 }
 
 .app-event-item.event-old {
-  color: #ff0000;
-  font-weight: 600;
+  opacity: 0.5;
+  color: #999;
 }
 
 /* SortableJS Styles */
