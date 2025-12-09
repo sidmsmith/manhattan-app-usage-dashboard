@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.3.0';
+const DASHBOARD_VERSION = '0.3.2';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -181,15 +181,12 @@ async function loadDashboardData() {
 
 // Load overall summary data
 async function loadOverallSummary() {
-  const [totalEvents, events24h, totalOpens] = await Promise.all([
+  const [totalEvents, events24h, totalOpens, recentEvents] = await Promise.all([
     fetchSensorData('sensor.all_apps_total_events'),
     fetchSensorData('sensor.all_apps_events_last_24h'),
-    fetchSensorData('sensor.all_apps_total_opens')
+    fetchSensorData('sensor.all_apps_total_opens'),
+    fetchSensorData('sensor.all_apps_recent_events')
   ]);
-  
-  // For "all apps" summary, fetch recent events from multiple apps and combine
-  // For now, just fetch from one app (can be enhanced later)
-  const recentEvents = await fetchRecentEvents('mhe_console');
 
   if (totalEvents) {
     document.getElementById('total-events').textContent = totalEvents.state || '0';
@@ -200,32 +197,17 @@ async function loadOverallSummary() {
   if (totalOpens) {
     document.getElementById('total-opens').textContent = totalOpens.state || '0';
   }
-  // recentEvents is already an array from fetchRecentEvents
-  if (Array.isArray(recentEvents)) {
-    renderRecentEvents(recentEvents);
-  } else {
-    renderRecentEvents([]);
-  }
-}
-
-// Fetch recent events directly from database (bypasses 255 char SQL sensor limit)
-async function fetchRecentEvents(appId) {
-  try {
-    // Use serverless function to query database directly
-    const url = `/api/fetch-recent-events?app_name=${encodeURIComponent(appId)}`;
-    const response = await fetch(url, { 
-      method: 'GET', 
-      headers: { 'Content-Type': 'application/json' } 
-    });
-    
-    if (response.ok) {
-      const result = await response.json();
-      return Array.isArray(result.events) ? result.events : [];
+  // Parse events from attributes
+  let events = recentEvents?.attributes?.events || [];
+  if (typeof events === 'string') {
+    try {
+      events = JSON.parse(events);
+    } catch (e) {
+      console.error('Failed to parse events JSON:', e);
+      events = [];
     }
-  } catch (error) {
-    console.error(`Error fetching recent events for ${appId}:`, error);
   }
-  return [];
+  renderRecentEvents(Array.isArray(events) ? events : []);
 }
 
 // Load data for all apps
@@ -235,11 +217,22 @@ async function loadAppData() {
       fetchSensorData(`sensor.${app.id}_total_events`),
       fetchSensorData(`sensor.${app.id}_events_last_24h`),
       fetchSensorData(`sensor.${app.id}_total_opens`),
-      fetchRecentEvents(app.id) // Fetch directly from database instead of SQL sensor
+      fetchSensorData(`sensor.${app.id}_recent_events`)
     ]);
 
-    // recentEvents is already an array from fetchRecentEvents
-    const events = Array.isArray(recentEvents) ? recentEvents : [];
+    // Parse events from state (JSON string)
+    let events = [];
+    if (recentEvents?.state && recentEvents.state !== 'unknown' && recentEvents.state !== '') {
+      try {
+        events = JSON.parse(recentEvents.state);
+      } catch (e) {
+        console.error(`Failed to parse events JSON for ${app.id}:`, e);
+        events = [];
+      }
+    }
+    if (!Array.isArray(events)) {
+      events = [];
+    }
 
     return {
       id: app.id,
