@@ -24,6 +24,8 @@ body {
   padding: 8px 12px;
   background: linear-gradient(135deg, rgba(96, 125, 139, 0.1) 0%, rgba(96, 125, 139, 0.05) 100%);
   box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  width: calc(100% - 40px);
+  box-sizing: border-box;
 }
 
 .header-content {
