@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.1.4';
+const DASHBOARD_VERSION = '0.1.5';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -519,10 +519,19 @@ function showError(message) {
 
 // Open event modal with event data
 async function openEventModal(event) {
+  console.log('[openEventModal] Opening modal for event:', {
+    timestamp: event.timestamp,
+    event_name: event.event_name,
+    app_name: event.app_name
+  });
+  
   const modal = document.getElementById('eventModal');
   const modalBody = document.getElementById('eventModalBody');
   
-  if (!modal || !modalBody) return;
+  if (!modal || !modalBody) {
+    console.error('[openEventModal] Modal elements not found!');
+    return;
+  }
 
   // Show loading state
   modalBody.innerHTML = '<div class="event-json-viewer">Loading full event data...</div>';
@@ -530,17 +539,21 @@ async function openEventModal(event) {
   
   try {
     // Fetch full event data from HA
+    console.log('[openEventModal] Calling fetchFullEventData...');
     const fullEventData = await fetchFullEventData(event);
+    console.log('[openEventModal] Received event data, source:', fullEventData._source);
     
     // Format and display the event data
     const formattedJson = formatEventJson(fullEventData || event);
     modalBody.innerHTML = `<div class="event-json-viewer">${formattedJson}</div>`;
   } catch (error) {
-    console.error('Error fetching full event data:', error);
+    console.error('[openEventModal] Error in modal open:', error);
+    console.error('[openEventModal] Error stack:', error.stack);
     // Fallback to displaying the event data we have
     const formattedJson = formatEventJson(event);
-    modalBody.innerHTML = `<div class="event-json-viewer">${formattedJson}<br/><br/><em>Note: Could not fetch full event data from HA. Showing available data.</em></div>`;
+    modalBody.innerHTML = `<div class="event-json-viewer">${formattedJson}<br/><br/><em>Note: Could not fetch full event data from HA. Showing available data.</em><br/><br/><strong>Error:</strong> ${error.message}</div>`;
   }
+}
   
   // Close on background click
   modal.addEventListener('click', function closeOnBackground(e) {
@@ -562,13 +575,20 @@ function closeEventModal() {
 // Fetch full event data from Home Assistant
 // Uses the Python script service to query the database for full event data
 async function fetchFullEventData(event) {
+  console.log('[fetchFullEventData] Starting fetch for event:', {
+    timestamp: event.timestamp,
+    event_name: event.event_name,
+    app_name: event.app_name,
+    hasConfig: !!(CONFIG.haUrl && CONFIG.haToken)
+  });
+  
   try {
     const timestamp = event.timestamp;
     const event_name = event.event_name;
     const app_name = event.app_name;
     
     if (!timestamp) {
-      console.warn('No timestamp in event, cannot fetch full data');
+      console.warn('[fetchFullEventData] No timestamp in event, cannot fetch full data');
       return event;
     }
     
@@ -678,7 +698,8 @@ async function fetchFullEventData(event) {
     }
     
     // Fallback: return what we have
-    console.warn('Could not fetch full event data from database, using available fields');
+    console.warn('[fetchFullEventData] Could not fetch full event data from database, using available fields');
+    console.log('[fetchFullEventData] Available event fields:', Object.keys(event));
     return {
       event_type: 'app_usage_event',
       data: event,
@@ -687,11 +708,18 @@ async function fetchFullEventData(event) {
       context: {},
       ...event,
       _source: 'sensor_data_fallback',
-      _note: 'Full event data query failed or not configured. Showing available fields only.'
+      _note: 'Full event data query failed or not configured. Showing available fields only.',
+      _debug: {
+        timestamp: timestamp,
+        event_name: event_name,
+        app_name: app_name,
+        hasConfig: !!(CONFIG.haUrl && CONFIG.haToken)
+      }
     };
     
   } catch (error) {
-    console.error('Error fetching full event data:', error);
+    console.error('[fetchFullEventData] Error fetching full event data:', error);
+    console.error('[fetchFullEventData] Error stack:', error.stack);
     // Return the event we have as fallback
     return {
       event_type: 'app_usage_event',
@@ -701,7 +729,8 @@ async function fetchFullEventData(event) {
       context: {},
       ...event,
       _source: 'sensor_data_error',
-      _error: error.message
+      _error: error.message,
+      _errorStack: error.stack
     };
   }
 }
