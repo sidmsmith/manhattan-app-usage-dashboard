@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.0.2';
+const DASHBOARD_VERSION = '0.0.3';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -277,7 +277,7 @@ function renderRecentEvents(events) {
   });
 }
 
-// Create event item element
+// Create event item element (for header card - reversed format: App bold, then Event)
 function createEventItem(event) {
   const div = document.createElement('div');
   div.className = 'event-item';
@@ -290,7 +290,8 @@ function createEventItem(event) {
   const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   const org = event.org || 'N/A';
 
-  div.innerHTML = `• <strong>${eventName}</strong> (${appShort}) — ${mmdd} ${time} — ${org}`;
+  // Header card format: App (bold) || Event
+  div.innerHTML = `• <strong>${appShort}</strong> — ${eventName} — ${mmdd} ${time} — ${org}`;
   return div;
 }
 
