@@ -1,0 +1,446 @@
+// Configuration
+// For Vercel: environment variables are available via process.env
+// For local dev: create a config.js file (not committed to git)
+const CONFIG = {
+  haUrl: window.CONFIG?.HA_URL || '',
+  haToken: window.CONFIG?.HA_TOKEN || '',
+  refreshInterval: 60000, // 60 seconds
+};
+
+// Load config from external file if it exists (for local development)
+// This file should be in .gitignore
+if (typeof window.CONFIG === 'undefined') {
+  const script = document.createElement('script');
+  script.src = 'config.js';
+  script.onerror = () => {
+    console.warn('config.js not found. Using environment variables or defaults.');
+    // Try to get from meta tags as fallback
+    const metaUrl = document.querySelector('meta[name="ha-url"]');
+    const metaToken = document.querySelector('meta[name="ha-token"]');
+    if (metaUrl) CONFIG.haUrl = metaUrl.content;
+    if (metaToken) CONFIG.haToken = metaToken.content;
+  };
+  document.head.appendChild(script);
+}
+
+// App definitions with display names
+const APPS = [
+  { id: 'lpn_unlock_app', name: 'LPN Unlock App', icon: '🔓' },
+  { id: 'mhe_console', name: 'MHE Console', icon: '🖥️' },
+  { id: 'appt_app', name: 'APPT App', icon: '📅' },
+  { id: 'pos_items', name: 'POS Items', icon: '📦' },
+  { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚' },
+  { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍' },
+  { id: 'forecast_import', name: 'Import Forecast', icon: '📊' },
+  { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠' },
+  { id: 'item_generator_gallery', name: 'Item Generator Gallery', icon: '🖼️' },
+  { id: 'order_generator', name: 'Order Generator', icon: '📋' },
+  { id: 'schedule_app', name: 'Schedule App', icon: '📆' },
+  { id: 'todolist', name: 'Todo List', icon: '✅' },
+  { id: 'update_appt', name: 'Update Appointment', icon: '✏️' },
+];
+
+// State
+let appData = {};
+let sortOrder = 'recent';
+let sortableInstance = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  loadSortOrder();
+  initializeSortable();
+  setupEventListeners();
+  loadDashboardData();
+  setInterval(loadDashboardData, CONFIG.refreshInterval);
+});
+
+// Load saved sort order from localStorage
+function loadSortOrder() {
+  const saved = localStorage.getItem('dashboardSortOrder');
+  if (saved) {
+    sortOrder = saved;
+    document.getElementById('sortOrder').value = saved;
+  }
+}
+
+// Save sort order to localStorage
+function saveSortOrder(order) {
+  sortOrder = order;
+  localStorage.setItem('dashboardSortOrder', order);
+}
+
+// Initialize SortableJS for drag and drop
+function initializeSortable() {
+  const container = document.getElementById('cardsContainer');
+  if (container && typeof Sortable !== 'undefined') {
+    sortableInstance = new Sortable(container, {
+      animation: 150,
+      handle: '.drag-handle',
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      onEnd: () => {
+        // Save manual order when drag ends
+        if (sortOrder === 'manual') {
+          saveCardOrder();
+        }
+      }
+    });
+  }
+}
+
+// Save card order to localStorage
+function saveCardOrder() {
+  const cards = Array.from(document.querySelectorAll('.app-card'));
+  const order = cards.map(card => card.dataset.app);
+  localStorage.setItem('dashboardCardOrder', JSON.stringify(order));
+}
+
+// Load card order from localStorage
+function loadCardOrder() {
+  const saved = localStorage.getItem('dashboardCardOrder');
+  return saved ? JSON.parse(saved) : null;
+}
+
+// Setup event listeners
+function setupEventListeners() {
+  const sortDropdown = document.getElementById('sortOrder');
+  if (sortDropdown) {
+    sortDropdown.addEventListener('change', (e) => {
+      const newOrder = e.target.value;
+      saveSortOrder(newOrder);
+      renderCards();
+    });
+  }
+}
+
+// Fetch data from Home Assistant API
+async function fetchSensorData(entityId) {
+  try {
+    let url;
+    let options = {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    // If we have direct HA config (local dev), use it directly
+    if (CONFIG.haUrl && CONFIG.haToken) {
+      url = `${CONFIG.haUrl}/api/states/${entityId}`;
+      options.headers['Authorization'] = `Bearer ${CONFIG.haToken}`;
+    } else {
+      // Otherwise, use Vercel serverless function (production)
+      url = `/api/fetch-sensor?entityId=${encodeURIComponent(entityId)}`;
+    }
+
+    const response = await fetch(url, options);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error fetching ${entityId}:`, error);
+    return null;
+  }
+}
+
+// Load all dashboard data
+async function loadDashboardData() {
+  try {
+    // Load overall summary
+    await loadOverallSummary();
+
+    // Load individual app data
+    await loadAppData();
+
+    // Render cards
+    renderCards();
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+    showError('Failed to load dashboard data. Check console for details.');
+  }
+}
+
+// Load overall summary data
+async function loadOverallSummary() {
+  const [totalEvents, events24h, totalOpens, recentEvents] = await Promise.all([
+    fetchSensorData('sensor.all_apps_total_events'),
+    fetchSensorData('sensor.all_apps_events_last_24h'),
+    fetchSensorData('sensor.all_apps_total_opens'),
+    fetchSensorData('sensor.all_apps_recent_events')
+  ]);
+
+  if (totalEvents) {
+    document.getElementById('total-events').textContent = totalEvents.state || '0';
+  }
+  if (events24h) {
+    document.getElementById('events-24h').textContent = events24h.state || '0';
+  }
+  if (totalOpens) {
+    document.getElementById('total-opens').textContent = totalOpens.state || '0';
+  }
+  if (recentEvents && recentEvents.attributes?.events) {
+    renderRecentEvents(recentEvents.attributes.events);
+  }
+}
+
+// Load data for all apps
+async function loadAppData() {
+  const promises = APPS.map(async (app) => {
+    const [totalEvents, events24h, totalOpens, recentEvents] = await Promise.all([
+      fetchSensorData(`sensor.${app.id}_total_events`),
+      fetchSensorData(`sensor.${app.id}_events_last_24h`),
+      fetchSensorData(`sensor.${app.id}_total_opens`),
+      fetchSensorData(`sensor.${app.id}_recent_events`)
+    ]);
+
+    return {
+      id: app.id,
+      name: app.name,
+      icon: app.icon,
+      totalEvents: totalEvents?.state || '0',
+      events24h: events24h?.state || '0',
+      totalOpens: totalOpens?.state || '0',
+      recentEvents: recentEvents?.attributes?.events || []
+    };
+  });
+
+  const results = await Promise.all(promises);
+  appData = {};
+  results.forEach(app => {
+    appData[app.id] = app;
+  });
+}
+
+// Render recent events in header
+function renderRecentEvents(events) {
+  if (!Array.isArray(events)) return;
+
+  const col1 = document.getElementById('recent-events-col1');
+  const col2 = document.getElementById('recent-events-col2');
+
+  if (!col1 || !col2) return;
+
+  col1.innerHTML = '';
+  col2.innerHTML = '';
+
+  events.slice(0, 3).forEach(event => {
+    const item = createEventItem(event);
+    col1.appendChild(item);
+  });
+
+  events.slice(3, 9).forEach(event => {
+    const item = createEventItem(event);
+    col2.appendChild(item);
+  });
+}
+
+// Create event item element
+function createEventItem(event) {
+  const div = document.createElement('div');
+  div.className = 'event-item';
+
+  const dt = new Date(event.timestamp);
+  const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
+  const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+
+  const appShort = getAppShortName(event.app_name);
+  const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const org = event.org || 'N/A';
+
+  div.innerHTML = `• <strong>${eventName}</strong> (${appShort}) — ${mmdd} ${time} — ${org}`;
+  return div;
+}
+
+// Get short app name
+function getAppShortName(appName) {
+  const mapping = {
+    'lpn-unlock-app': 'LPN',
+    'mhe-console': 'MHE',
+    'appt-app': 'APPT',
+    'appt_app': 'APPT',
+    'POS Items': 'POS',
+    'driver-pickup': 'Driver',
+    'driver_pickup': 'Driver',
+    'Driver Pickup': 'Driver',
+    'facility-addresses': 'Facility',
+    'facility_addresses': 'Facility',
+    'Facility Addresses': 'Facility',
+    'Import Forecast': 'Forecast',
+    'apps-homepage': 'Homepage',
+    'item-generator-gallery': 'Item Gen',
+    'Item Generator': 'Item Gen',
+    'order-generator-app': 'Order Gen',
+    'Order Generator': 'Order Gen',
+    'schedule-app': 'Schedule',
+    'todolist': 'Todo',
+    'update-appt': 'Update Appt'
+  };
+  return mapping[appName] || appName;
+}
+
+// Sort apps based on current sort order
+function sortApps(apps) {
+  const sorted = [...apps];
+
+  switch (sortOrder) {
+    case 'recent':
+      sorted.sort((a, b) => {
+        const aTime = getMostRecentEventTime(a);
+        const bTime = getMostRecentEventTime(b);
+        return bTime - aTime; // Most recent first
+      });
+      break;
+
+    case '24h':
+      sorted.sort((a, b) => {
+        return parseInt(b.events24h) - parseInt(a.events24h);
+      });
+      break;
+
+    case 'events':
+      sorted.sort((a, b) => {
+        return parseInt(b.totalEvents) - parseInt(a.totalEvents);
+      });
+      break;
+
+    case 'opens':
+      sorted.sort((a, b) => {
+        return parseInt(b.totalOpens) - parseInt(a.totalOpens);
+      });
+      break;
+
+    case 'alphabetical':
+      sorted.sort((a, b) => {
+        return a.name.localeCompare(b.name);
+      });
+      break;
+
+    case 'manual':
+      const savedOrder = loadCardOrder();
+      if (savedOrder) {
+        sorted.sort((a, b) => {
+          const aIndex = savedOrder.indexOf(a.id);
+          const bIndex = savedOrder.indexOf(b.id);
+          if (aIndex === -1) return 1;
+          if (bIndex === -1) return -1;
+          return aIndex - bIndex;
+        });
+      }
+      break;
+  }
+
+  return sorted;
+}
+
+// Get most recent event timestamp for an app
+function getMostRecentEventTime(app) {
+  if (!app.recentEvents || app.recentEvents.length === 0) return 0;
+  const latest = app.recentEvents[0];
+  return new Date(latest.timestamp).getTime();
+}
+
+// Render all app cards
+function renderCards() {
+  const container = document.getElementById('cardsContainer');
+  if (!container) return;
+
+  const apps = Object.values(appData);
+  const sortedApps = sortApps(apps);
+
+  container.innerHTML = '';
+
+  sortedApps.forEach(app => {
+    const card = createAppCard(app);
+    container.appendChild(card);
+  });
+
+  // Reinitialize SortableJS after rendering
+  if (sortOrder === 'manual') {
+    initializeSortable();
+  }
+}
+
+// Create app card element
+function createAppCard(app) {
+  const card = document.createElement('div');
+  card.className = 'app-card';
+  card.dataset.app = app.id;
+
+  const dragHandle = document.createElement('div');
+  dragHandle.className = 'drag-handle';
+  dragHandle.innerHTML = '⋮⋮';
+  dragHandle.title = 'Drag to reorder';
+
+  const header = document.createElement('div');
+  header.className = 'app-card-header';
+  header.textContent = `${app.icon || ''} ${app.name}`;
+
+  const metrics = document.createElement('div');
+  metrics.className = 'app-metrics';
+  metrics.innerHTML = `
+    <div class="app-metric">
+      <div class="app-metric-label">Total Events</div>
+      <div class="app-metric-value">${app.totalEvents}</div>
+    </div>
+    <div class="app-metric">
+      <div class="app-metric-label">Last 24 Hours</div>
+      <div class="app-metric-value">${app.events24h}</div>
+    </div>
+    <div class="app-metric">
+      <div class="app-metric-label">Total Opens</div>
+      <div class="app-metric-value">${app.totalOpens}</div>
+    </div>
+  `;
+
+  const recentEvents = document.createElement('div');
+  recentEvents.className = 'app-recent-events';
+  recentEvents.innerHTML = '<h3>Recent Events</h3>';
+
+  const eventsList = document.createElement('div');
+  eventsList.className = 'app-events-list';
+
+  if (app.recentEvents && app.recentEvents.length > 0) {
+    app.recentEvents.slice(0, 5).forEach(event => {
+      const item = createAppEventItem(event);
+      eventsList.appendChild(item);
+    });
+  } else {
+    eventsList.innerHTML = '<div class="app-event-item">No recent events found.</div>';
+  }
+
+  recentEvents.appendChild(eventsList);
+
+  card.appendChild(dragHandle);
+  card.appendChild(header);
+  card.appendChild(metrics);
+  card.appendChild(recentEvents);
+
+  return card;
+}
+
+// Create app event item
+function createAppEventItem(event) {
+  const div = document.createElement('div');
+  div.className = 'app-event-item';
+
+  const dt = new Date(event.timestamp);
+  const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
+  const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+
+  const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const org = event.org || 'N/A';
+
+  div.innerHTML = `• <strong>${eventName}</strong> — ${mmdd} ${time} — ${org}`;
+  return div;
+}
+
+// Show error message
+function showError(message) {
+  const container = document.getElementById('cardsContainer');
+  if (container) {
+    container.innerHTML = `<div class="loading-message" style="color: red;">${message}</div>`;
+  }
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manhattan App Usage Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Header Card: Overall Summary -->
+    <div class="header-card">
+      <div class="header-content">
+        <div class="summary-column">
+          <div class="summary-header">
+            <h2>Overall Summary</h2>
+            <select id="sortOrder" class="sort-dropdown">
+              <option value="recent">Recent</option>
+              <option value="24h">24H</option>
+              <option value="events">Events</option>
+              <option value="opens">Opens</option>
+              <option value="alphabetical">Alphabetical</option>
+              <option value="manual">Manual</option>
+            </select>
+          </div>
+          <div class="metrics-row">
+            <div class="metric">
+              <div class="metric-label"><strong>Events</strong></div>
+              <div class="metric-value" id="total-events">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label"><strong>24 Hrs</strong></div>
+              <div class="metric-value" id="events-24h">-</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label"><strong>Opens</strong></div>
+              <div class="metric-value" id="total-opens">-</div>
+            </div>
+          </div>
+        </div>
+        <div class="recent-events-column">
+          <h2>Recent Events</h2>
+          <div class="events-list" id="recent-events-col1"></div>
+        </div>
+        <div class="recent-events-column">
+          <div class="events-list scrollable" id="recent-events-col2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- App Cards Container -->
+    <div class="cards-container" id="cardsContainer">
+      <!-- Cards will be dynamically generated here -->
+      <div class="loading-message">Loading app data...</div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

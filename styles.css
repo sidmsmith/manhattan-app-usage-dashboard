@@ -1,0 +1,314 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-color, #f5f5f5);
+  padding: 20px;
+  color: #333;
+}
+
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header Card */
+.header-card {
+  border: 8px solid #607D8B;
+  border-radius: 20px;
+  margin: 5px 20px 20px 20px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(96, 125, 139, 0.1) 0%, rgba(96, 125, 139, 0.05) 100%);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.header-content {
+  display: grid;
+  grid-template-columns: 30% 35% 35%;
+  gap: 12px;
+  width: 100%;
+}
+
+.summary-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.summary-header h2 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.0;
+  white-space: nowrap;
+}
+
+.sort-dropdown {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.metrics-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.metric {
+  flex: 1;
+  text-align: center;
+}
+
+.metric-label {
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0 0 2px 0;
+}
+
+.metric-label strong {
+  font-weight: bold;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.recent-events-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recent-events-column h2 {
+  font-size: 1.0rem;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  line-height: 1.0;
+}
+
+.events-list {
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0;
+}
+
+.events-list.scrollable {
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+.events-list.scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.events-list.scrollable::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.event-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 2px 0;
+  padding: 0;
+}
+
+/* App Cards */
+.cards-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin: 20px;
+}
+
+.app-card {
+  border: 10px solid;
+  border-radius: 30px;
+  margin: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  background: white;
+  position: relative;
+  cursor: move;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.app-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(0,0,0,0.3);
+}
+
+.app-card.dragging {
+  opacity: 0.5;
+}
+
+.drag-handle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: grab;
+  opacity: 0.3;
+  font-size: 18px;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.app-card:hover .drag-handle {
+  opacity: 0.6;
+}
+
+.app-card-header {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.app-metrics {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.app-metric {
+  flex: 1;
+  text-align: center;
+}
+
+.app-metric-label {
+  font-weight: 900;
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.app-metric-value {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.app-recent-events {
+  margin-top: 15px;
+}
+
+.app-recent-events h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.app-events-list {
+  font-size: 12px;
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.app-events-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-events-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.app-event-item {
+  margin: 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* SortableJS Styles */
+.sortable-ghost {
+  opacity: 0.4;
+}
+
+.sortable-drag {
+  opacity: 0.8;
+}
+
+/* Loading State */
+.loading-message {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 18px;
+  grid-column: 1 / -1;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .header-content {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sort-dropdown {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .cards-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin: 10px;
+  }
+
+  .app-card {
+    margin: 10px 0;
+  }
+
+  .drag-handle {
+    display: none; /* Hide drag handle on mobile */
+  }
+}
+
+/* Card Colors - Define unique colors for each app */
+.app-card[data-app="lpn_unlock_app"] { border-color: #2196F3; }
+.app-card[data-app="mhe_console"] { border-color: #FF9800; }
+.app-card[data-app="appt_app"] { border-color: #4CAF50; }
+.app-card[data-app="pos_items"] { border-color: #9C27B0; }
+.app-card[data-app="driver_pickup"] { border-color: #F44336; }
+.app-card[data-app="facility_addresses"] { border-color: #00BCD4; }
+.app-card[data-app="forecast_import"] { border-color: #FFC107; }
+.app-card[data-app="apps_homepage"] { border-color: #795548; }
+.app-card[data-app="item_generator_gallery"] { border-color: #607D8B; }
+.app-card[data-app="order_generator"] { border-color: #E91E63; }
+.app-card[data-app="schedule_app"] { border-color: #3F51B5; }
+.app-card[data-app="todolist"] { border-color: #009688; }
+.app-card[data-app="update_appt"] { border-color: #FF5722; }
