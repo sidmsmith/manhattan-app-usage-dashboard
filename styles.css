@@ -67,7 +67,7 @@ body {
 .sort-dropdown {
   font-size: 0.75rem;
   padding: 6px 28px 6px 10px;
-  border: 1px solid #ddd;
+  border: 1px none #e7eaeb;
   border-radius: 18px;
   background: #e7eaeb;
   cursor: pointer;
@@ -83,7 +83,7 @@ body {
   background-size: 12px;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  margin-left: -15px;
+  margin-left: -8px;
 }
 
 .sort-dropdown:hover {
