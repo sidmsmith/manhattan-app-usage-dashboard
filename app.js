@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.1.9';
+const DASHBOARD_VERSION = '0.2.0';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -604,11 +604,11 @@ function closeEventModal() {
 }
 
 // Fetch full event data from Home Assistant
-// Uses Option 1: Template Sensor with SQL Query
+// Uses shell_command for immediate on-demand query (no 60-second wait)
 // 1. Set input_text.event_id_to_query with event_id
-// 2. SQL sensor queries database (runs every 5 seconds)
-// 3. Template sensor reads SQL result
-// 4. Frontend reads template sensor to get full event data
+// 2. Call shell_command service to query SQLite directly
+// 3. File sensor reads the result file
+// 4. Frontend polls file sensor to get full event data
 async function fetchFullEventData(event) {
   console.log('[fetchFullEventData] Starting fetch for event:', {
     event_id: event.event_id,
@@ -673,19 +673,35 @@ async function fetchFullEventData(event) {
       throw new Error(`Failed to set input_text: ${setInputResponse.status}`);
     }
     
-    console.log('[fetchFullEventData] Step 2: Waiting for SQL sensor to update (max 70 seconds)...');
+    // Step 2: Call shell_command service to query database immediately
+    console.log('[fetchFullEventData] Step 2: Calling shell_command.query_event_by_id');
+    const shellCommandUrl = `${CONFIG.haUrl}/api/services/shell_command/query_event_by_id`;
+    const shellCommandResponse = await fetch(shellCommandUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CONFIG.haToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
     
-    // Step 2: Wait for SQL sensor to update (runs every 60 seconds by default, so wait up to 70 seconds)
-    const maxWaitTime = 70000; // 70 seconds (SQL sensors run every 60 seconds)
-    const checkInterval = 500; // Check every 500ms
+    if (!shellCommandResponse.ok) {
+      const errorText = await shellCommandResponse.text();
+      console.error('[fetchFullEventData] Failed to call shell_command:', shellCommandResponse.status, errorText);
+      throw new Error(`Failed to call shell_command: ${shellCommandResponse.status}`);
+    }
+    
+    // Step 3: Wait for file sensor to update (should be very fast, max 5 seconds)
+    console.log('[fetchFullEventData] Step 3: Waiting for file sensor to update (max 5 seconds)...');
+    const maxWaitTime = 5000; // 5 seconds (should be much faster)
+    const checkInterval = 200; // Check every 200ms
     const startTime = Date.now();
     let sensorData = null;
     
     while (Date.now() - startTime < maxWaitTime) {
       await new Promise(resolve => setTimeout(resolve, checkInterval));
       
-      // Step 3: Read template sensor result
-      const sensorUrl = `${CONFIG.haUrl}/api/states/sensor.full_event_data_result`;
+      // Read file sensor result
+      const sensorUrl = `${CONFIG.haUrl}/api/states/sensor.event_query_result_file`;
       const sensorResponse = await fetch(sensorUrl, {
         method: 'GET',
         headers: {
@@ -696,14 +712,30 @@ async function fetchFullEventData(event) {
       
       if (sensorResponse.ok) {
         sensorData = await sensorResponse.json();
-        const sharedData = sensorData.attributes?.shared_data;
+        const fileContent = sensorData.state;
         
-        if (sharedData && sharedData !== '' && sharedData !== 'unknown') {
-          console.log('[fetchFullEventData] Step 3: Success! Found event data');
+        if (fileContent && fileContent !== 'unknown' && fileContent !== '' && !fileContent.includes('error')) {
+          console.log('[fetchFullEventData] Step 4: Success! Found event data in file');
           try {
-            // Parse the JSON string from SQL sensor
-            const parsed = typeof sharedData === 'string' ? JSON.parse(sharedData) : sharedData;
-            console.log('[fetchFullEventData] Parsed shared_data with', Object.keys(parsed).length, 'fields');
+            // Parse the JSON from file sensor
+            const parsed = typeof fileContent === 'string' ? JSON.parse(fileContent) : fileContent;
+            
+            // Check if it's an error object
+            if (parsed.error) {
+              console.warn('[fetchFullEventData] Event not found:', parsed.error);
+              return {
+                event_type: 'app_usage_event',
+                data: event,
+                origin: 'LOCAL',
+                time_fired: timestamp,
+                context: {},
+                ...event,
+                _source: 'event_not_found',
+                _error: parsed.error
+              };
+            }
+            
+            console.log('[fetchFullEventData] Parsed file content with', Object.keys(parsed).length, 'fields');
             
             return {
               event_type: 'app_usage_event',
@@ -712,19 +744,19 @@ async function fetchFullEventData(event) {
               time_fired: parsed.timestamp || timestamp,
               context: {},
               ...parsed,
-              _source: 'database_query_sql',
+              _source: 'database_query_shell_command',
               _event_id: event_id
             };
           } catch (e) {
-            console.error('[fetchFullEventData] Error parsing shared_data JSON:', e);
+            console.error('[fetchFullEventData] Error parsing file content JSON:', e, 'Raw content:', fileContent);
           }
         } else {
-          console.log('[fetchFullEventData] Still waiting... sensor state:', sensorData.state, 'shared_data:', sharedData ? 'present' : 'missing');
+          console.log('[fetchFullEventData] Still waiting... file sensor state:', fileContent ? 'present' : 'missing');
         }
       }
     }
     
-    console.warn('[fetchFullEventData] Timeout waiting for SQL sensor update. Returning available event data.');
+    console.warn('[fetchFullEventData] Timeout waiting for file sensor update. Returning available event data.');
     return {
       event_type: 'app_usage_event',
       data: event,
@@ -733,8 +765,8 @@ async function fetchFullEventData(event) {
       context: {},
       ...event,
       _source: 'sensor_data_fallback',
-      _note: 'SQL sensor did not return data within timeout period. Showing available fields only.',
-      _debug: { event_id: event_id, sensor_state: sensorData?.state, sensor_shared_data: sensorData?.attributes?.shared_data ? 'present' : 'missing' }
+      _note: 'File sensor did not return data within timeout period. Showing available fields only.',
+      _debug: { event_id: event_id, sensor_state: sensorData?.state }
     };
     
   } catch (error) {

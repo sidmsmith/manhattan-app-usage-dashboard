@@ -1,7 +1,7 @@
-// Vercel serverless function to fetch full event data using Option 1: Template Sensor with SQL Query
+// Vercel serverless function to fetch full event data using shell_command for immediate query
 // 1. Set input_text.event_id_to_query with event_id
-// 2. Wait for SQL sensor to update (runs every 5 seconds)
-// 3. Read template sensor result
+// 2. Call shell_command service to query SQLite directly
+// 3. Read file sensor result
 export default async function (req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -41,18 +41,34 @@ export default async function (req, res) {
       throw new Error(`Failed to set input_text: ${setInputResponse.status} ${errorText}`);
     }
 
-    // Step 2: Wait for SQL sensor to update (runs every 60 seconds by default, wait up to 70 seconds)
-    console.log('[fetch-full-event] Waiting for SQL sensor to update...');
-    const maxWaitTime = 70000; // 70 seconds (SQL sensors run every 60 seconds)
-    const checkInterval = 500; // Check every 500ms
+    // Step 2: Call shell_command service to query database immediately
+    console.log('[fetch-full-event] Calling shell_command.query_event_by_id');
+    const shellCommandUrl = `${HA_URL}/api/services/shell_command/query_event_by_id`;
+    const shellCommandResponse = await fetch(shellCommandUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${HA_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!shellCommandResponse.ok) {
+      const errorText = await shellCommandResponse.text();
+      throw new Error(`Failed to call shell_command: ${shellCommandResponse.status} ${errorText}`);
+    }
+
+    // Step 3: Wait for file sensor to update (should be very fast, max 5 seconds)
+    console.log('[fetch-full-event] Waiting for file sensor to update...');
+    const maxWaitTime = 5000; // 5 seconds (should be much faster)
+    const checkInterval = 200; // Check every 200ms
     const startTime = Date.now();
     let sensorData = null;
     
     while (Date.now() - startTime < maxWaitTime) {
       await new Promise(resolve => setTimeout(resolve, checkInterval));
       
-      // Step 3: Read template sensor result
-      const sensorUrl = `${HA_URL}/api/states/sensor.full_event_data_result`;
+      // Read file sensor result
+      const sensorUrl = `${HA_URL}/api/states/sensor.event_query_result_file`;
       const sensorResponse = await fetch(sensorUrl, {
         method: 'GET',
         headers: {
@@ -66,13 +82,26 @@ export default async function (req, res) {
       }
 
       sensorData = await sensorResponse.json();
-      const sharedData = sensorData.attributes?.shared_data;
+      const fileContent = sensorData.state;
       
-      if (sharedData && sharedData !== '' && sharedData !== 'unknown') {
-        console.log('[fetch-full-event] Success! Found event data');
+      if (fileContent && fileContent !== 'unknown' && fileContent !== '' && !fileContent.includes('error')) {
+        console.log('[fetch-full-event] Success! Found event data in file');
         try {
-          // Parse the JSON string from SQL sensor
-          const parsed = typeof sharedData === 'string' ? JSON.parse(sharedData) : sharedData;
+          // Parse the JSON from file sensor
+          const parsed = typeof fileContent === 'string' ? JSON.parse(fileContent) : fileContent;
+          
+          // Check if it's an error object
+          if (parsed.error) {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+            
+            return res.status(200).json({
+              success: false,
+              message: 'Event not found',
+              error: parsed.error
+            });
+          }
           
           res.setHeader('Access-Control-Allow-Origin', '*');
           res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -85,24 +114,24 @@ export default async function (req, res) {
             timestamp: parsed.timestamp || timestamp
           });
         } catch (e) {
-          console.error('[fetch-full-event] Error parsing shared_data JSON:', e);
+          console.error('[fetch-full-event] Error parsing file content JSON:', e);
         }
       }
     }
     
     // Timeout - return error
-    console.warn('[fetch-full-event] Timeout waiting for SQL sensor update');
+    console.warn('[fetch-full-event] Timeout waiting for file sensor update');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
     return res.status(200).json({
       success: false,
-      message: 'Event not found or timeout waiting for SQL sensor',
+      message: 'Event not found or timeout waiting for file sensor',
       sensor_state: sensorData?.state,
       debug: {
         requested_event_id: event_id,
-        sensor_shared_data: sensorData?.attributes?.shared_data ? 'present' : 'missing',
+        file_content: sensorData?.state ? 'present' : 'missing',
         wait_time_ms: Date.now() - startTime
       }
     });
