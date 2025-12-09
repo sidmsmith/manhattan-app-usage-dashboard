@@ -271,8 +271,9 @@ body {
 .app-events-list {
   font-size: 12px;
   line-height: 1.6;
-  max-height: 200px;
+  max-height: 120px;
   overflow-y: auto;
+  min-height: 120px;
 }
 
 .app-events-list::-webkit-scrollbar {

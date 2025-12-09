@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.0.10';
+const DASHBOARD_VERSION = '0.0.11';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -429,7 +429,7 @@ function createAppCard(app) {
       <div class="app-metric-value">${app.totalEvents}</div>
     </div>
     <div class="app-metric">
-      <div class="app-metric-label">Last 24 Hours</div>
+      <div class="app-metric-label">Last 24 Hrs</div>
       <div class="app-metric-value">${app.events24h}</div>
     </div>
     <div class="app-metric">
@@ -446,7 +446,8 @@ function createAppCard(app) {
   eventsList.className = 'app-events-list';
 
   if (app.recentEvents && Array.isArray(app.recentEvents) && app.recentEvents.length > 0) {
-    app.recentEvents.slice(0, 5).forEach(event => {
+    // Show all events but limit visible height with scrolling
+    app.recentEvents.forEach(event => {
       const item = createAppEventItem(event);
       eventsList.appendChild(item);
     });
