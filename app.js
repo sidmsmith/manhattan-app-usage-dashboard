@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.1.8';
+const DASHBOARD_VERSION = '0.1.9';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -673,10 +673,10 @@ async function fetchFullEventData(event) {
       throw new Error(`Failed to set input_text: ${setInputResponse.status}`);
     }
     
-    console.log('[fetchFullEventData] Step 2: Waiting for SQL sensor to update (max 10 seconds)...');
+    console.log('[fetchFullEventData] Step 2: Waiting for SQL sensor to update (max 70 seconds)...');
     
-    // Step 2: Wait for SQL sensor to update (runs every 5 seconds, so wait up to 10 seconds)
-    const maxWaitTime = 10000; // 10 seconds
+    // Step 2: Wait for SQL sensor to update (runs every 60 seconds by default, so wait up to 70 seconds)
+    const maxWaitTime = 70000; // 70 seconds (SQL sensors run every 60 seconds)
     const checkInterval = 500; // Check every 500ms
     const startTime = Date.now();
     let sensorData = null;

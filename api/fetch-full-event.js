@@ -41,9 +41,9 @@ export default async function (req, res) {
       throw new Error(`Failed to set input_text: ${setInputResponse.status} ${errorText}`);
     }
 
-    // Step 2: Wait for SQL sensor to update (runs every 5 seconds, wait up to 10 seconds)
+    // Step 2: Wait for SQL sensor to update (runs every 60 seconds by default, wait up to 70 seconds)
     console.log('[fetch-full-event] Waiting for SQL sensor to update...');
-    const maxWaitTime = 10000; // 10 seconds
+    const maxWaitTime = 70000; // 70 seconds (SQL sensors run every 60 seconds)
     const checkInterval = 500; // Check every 500ms
     const startTime = Date.now();
     let sensorData = null;
