@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.0.3';
+const DASHBOARD_VERSION = '0.0.4';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -258,20 +258,14 @@ async function loadAppData() {
 function renderRecentEvents(events) {
   if (!Array.isArray(events)) return;
 
-  const col1 = document.getElementById('recent-events-col1');
   const col2 = document.getElementById('recent-events-col2');
 
-  if (!col1 || !col2) return;
+  if (!col2) return;
 
-  col1.innerHTML = '';
   col2.innerHTML = '';
 
-  events.slice(0, 3).forEach(event => {
-    const item = createEventItem(event);
-    col1.appendChild(item);
-  });
-
-  events.slice(3, 9).forEach(event => {
+  // Display first 6 events in column 2
+  events.slice(0, 6).forEach(event => {
     const item = createEventItem(event);
     col2.appendChild(item);
   });
