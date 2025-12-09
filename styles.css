@@ -311,7 +311,7 @@ body {
 
 .app-event-item.event-old {
   opacity: 0.5;
-  color: #666;
+  color: #333;
 }
 
 /* SortableJS Styles */
