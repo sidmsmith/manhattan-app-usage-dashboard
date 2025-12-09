@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.1.2';
+const DASHBOARD_VERSION = '0.1.3';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -560,10 +560,46 @@ function closeEventModal() {
 }
 
 // Fetch full event data from Home Assistant
+// Note: HA stores full webhook data in events table, but REST API doesn't expose it directly
+// We need to check if there's a sensor that stores the full data, or use a custom SQL query
 async function fetchFullEventData(event) {
   try {
-    // Use the event timestamp to fetch from HA history
-    // HA stores events in the events table, we can query by time_fired
+    // First, check if the event object already has all the fields we need
+    // The SQL queries might be storing the full data in a specific field
+    // Let's check for common field names that might contain the full payload
+    const possibleFullDataFields = [
+      'full_data',
+      'event_data',
+      'webhook_data',
+      'raw_data',
+      'data',
+      'payload',
+      'metadata'
+    ];
+    
+    // Check if any of these fields exist and contain more data
+    for (const field of possibleFullDataFields) {
+      if (event[field] && typeof event[field] === 'object') {
+        // This might be the full data field
+        const fullData = event[field];
+        if (Object.keys(fullData).length > Object.keys(event).length / 2) {
+          // This field has significantly more data, use it
+          return {
+            event_type: 'app_usage_event',
+            data: fullData,
+            origin: 'LOCAL',
+            time_fired: event.timestamp,
+            context: {},
+            ...fullData,
+            _source: 'event_data_field',
+            _field_name: field
+          };
+        }
+      }
+    }
+    
+    // Try to fetch from HA using the event timestamp
+    // HA's logbook/history APIs don't return full event data, but let's try anyway
     const eventTime = new Date(event.timestamp);
     const startTime = new Date(eventTime.getTime() - 300000); // 5 minutes before
     const endTime = new Date(eventTime.getTime() + 300000); // 5 minutes after
@@ -571,92 +607,27 @@ async function fetchFullEventData(event) {
     const startTimeISO = startTime.toISOString();
     const endTimeISO = endTime.toISOString();
     
-    // Build URL for HA history API
-    let url;
-    const options = {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
-    // If we have direct HA config (local dev), use it directly
-    if (CONFIG.haUrl && CONFIG.haToken) {
-      // Try logbook API first - it has more event details
-      url = `${CONFIG.haUrl}/api/logbook/${startTimeISO}?end_time=${endTimeISO}`;
-      options.headers['Authorization'] = `Bearer ${CONFIG.haToken}`;
-    } else {
-      // Use Vercel serverless function (production)
-      url = `/api/fetch-event?start_time=${encodeURIComponent(startTimeISO)}&end_time=${encodeURIComponent(endTimeISO)}&event_type=app_usage_event&app_name=${encodeURIComponent(event.app_name)}&event_name=${encodeURIComponent(event.event_name)}&timestamp=${encodeURIComponent(event.timestamp)}`;
-    }
-
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const logbookData = await response.json();
+    // Try using HA's template API or a custom sensor if available
+    // For now, we'll need to rely on what's in the event object
+    // The full data should be accessible if the SQL queries store it
     
-    // Logbook API returns events with details
-    // Find the matching event
-    if (Array.isArray(logbookData) && logbookData.length > 0) {
-      const matchingEvent = logbookData.find(e => {
-        const logTime = new Date(e.when);
-        const eventTime = new Date(event.timestamp);
-        const timeDiff = Math.abs(logTime.getTime() - eventTime.getTime());
-        
-        // Match by timestamp (within 10 seconds) and event name
-        return timeDiff < 10000 && 
-               (e.name === event.event_name || 
-                e.entity_id?.includes(event.app_name) ||
-                e.message?.includes(event.app_name) ||
-                e.domain === 'app_usage_event');
-      });
-      
-      if (matchingEvent) {
-        // Logbook may have additional context, merge with our event data
-        // The full event data should include all fields from the webhook
-        return {
-          event_type: 'app_usage_event',
-          data: {
-            // Include all fields from the original event (these are from the SQL query)
-            ...event,
-            // Add any additional fields from logbook
-            ...(matchingEvent.context || {}),
-            // Include logbook metadata
-            _logbook_data: matchingEvent
-          },
-          origin: matchingEvent.origin || 'LOCAL',
-          time_fired: matchingEvent.when || event.timestamp,
-          context: matchingEvent.context || {},
-          // Also include all event fields at top level for easier reading
-          ...event,
-          // Include logbook fields
-          entity_id: matchingEvent.entity_id,
-          name: matchingEvent.name,
-          message: matchingEvent.message,
-          domain: matchingEvent.domain,
-          _source: 'logbook'
-        };
-      }
-    }
-    
-    // Fallback: return the event we have, but structure it like the full event
+    // Return the event with all its fields - the SQL query should have extracted everything
+    // If fields are missing, they're not in the SQL query results
     return {
       event_type: 'app_usage_event',
-      data: event,
+      data: event, // All fields from the SQL query
       origin: 'LOCAL',
       time_fired: event.timestamp,
       context: {},
+      // Include all fields from event at top level
       ...event,
-      _source: 'sensor_data',
-      _note: 'Full event data not available, showing sensor data only'
+      _source: 'sensor_sql_data',
+      _note: 'Displaying all fields available from SQL sensor query. If fields are missing, they may need to be added to the SQL query in HA configuration.yaml'
     };
     
   } catch (error) {
     console.error('Error fetching full event data:', error);
-    // Return the event we have as fallback, structured like full event
+    // Return the event we have as fallback
     return {
       event_type: 'app_usage_event',
       data: event,
@@ -670,37 +641,59 @@ async function fetchFullEventData(event) {
   }
 }
 
-// Format event JSON for display
+// Format event JSON for display - show ALL fields including nested data
 function formatEventJson(event) {
-  // Create a comprehensive event object with all possible fields
-  // This ensures we show everything, including nested data
-  const fullEvent = {
-    // Top-level event structure (as received from HA webhook)
+  // Deep clone to avoid modifying original
+  const eventCopy = JSON.parse(JSON.stringify(event));
+  
+  // Recursively collect ALL fields, including nested objects
+  const collectAllFields = (obj, prefix = '') => {
+    const result = {};
+    
+    for (const key in obj) {
+      if (key.startsWith('_')) continue; // Skip internal metadata fields for now
+      
+      const value = obj[key];
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      
+      if (value === null || value === undefined) {
+        result[fullKey] = value;
+      } else if (Array.isArray(value)) {
+        result[fullKey] = value;
+      } else if (typeof value === 'object' && !(value instanceof Date)) {
+        // Recursively process nested objects, but also include the object itself
+        const nested = collectAllFields(value, fullKey);
+        Object.assign(result, nested);
+        // Also keep the object at this level for structure
+        result[fullKey] = value;
+      } else {
+        result[fullKey] = value;
+      }
+    }
+    
+    return result;
+  };
+  
+  // Collect all fields
+  const allFields = collectAllFields(eventCopy);
+  
+  // Create structured output showing the full event
+  const structuredEvent = {
+    // Event metadata
     event_type: 'app_usage_event',
-    data: event, // All the data fields
     origin: event.origin || 'LOCAL',
     time_fired: event.timestamp || event.time_fired,
     context: event.context || {},
-    // Include all fields from the event at top level for easier reading
-    ...event,
-    // If there's a nested data object, include it too
-    ...(event.data && typeof event.data === 'object' ? event.data : {})
+    
+    // All data fields (flattened and structured)
+    data: allFields,
+    
+    // Also include original structure for reference
+    _original_structure: eventCopy
   };
   
-  // Remove duplicates (keep the most specific value)
-  const cleanedEvent = {};
-  const seenKeys = new Set();
-  
-  // First pass: add all keys, keeping the first occurrence
-  for (const key in fullEvent) {
-    if (!seenKeys.has(key) && fullEvent[key] !== undefined) {
-      cleanedEvent[key] = fullEvent[key];
-      seenKeys.add(key);
-    }
-  }
-  
   // Create a nicely formatted JSON string
-  const formatted = JSON.stringify(cleanedEvent, null, 2);
+  const formatted = JSON.stringify(structuredEvent, null, 2);
   
   // Apply syntax highlighting
   return formatted
