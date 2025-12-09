@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.1.7';
+const DASHBOARD_VERSION = '0.1.8';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -604,9 +604,11 @@ function closeEventModal() {
 }
 
 // Fetch full event data from Home Assistant
-// NOTE: Python scripts cannot access database (no sqlite3, os, json imports allowed)
-// For now, we'll use HA's History API or return available event data
-// Future: Create template sensor with SQL query or custom integration
+// Uses Option 1: Template Sensor with SQL Query
+// 1. Set input_text.event_id_to_query with event_id
+// 2. SQL sensor queries database (runs every 5 seconds)
+// 3. Template sensor reads SQL result
+// 4. Frontend reads template sensor to get full event data
 async function fetchFullEventData(event) {
   console.log('[fetchFullEventData] Starting fetch for event:', {
     event_id: event.event_id,
@@ -619,43 +621,110 @@ async function fetchFullEventData(event) {
   try {
     const event_id = event.event_id;
     const timestamp = event.timestamp;
-    const event_name = event.event_name;
-    const app_name = event.app_name;
     
-    if (!timestamp) {
-      console.warn('[fetchFullEventData] No timestamp in event, cannot fetch full data');
+    if (!event_id) {
+      console.warn('[fetchFullEventData] No event_id in event, cannot fetch full data');
       return event;
     }
     
-    // Try using HA's History API to get more event details
-    // Calculate time window: 30 seconds before and after the event timestamp
-    const eventTime = new Date(timestamp);
-    const startTime = new Date(eventTime.getTime() - 30000); // 30 seconds before
-    const endTime = new Date(eventTime.getTime() + 30000);   // 30 seconds after
+    if (!CONFIG.haUrl || !CONFIG.haToken) {
+      console.warn('[fetchFullEventData] No HA config, using serverless function');
+      // Use serverless function for production
+      const url = `/api/fetch-full-event?event_id=${encodeURIComponent(event_id)}`;
+      const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          console.log('[fetchFullEventData] Success! Returning serverless data with', Object.keys(result.data).length, 'fields');
+          return {
+            event_type: 'app_usage_event',
+            data: result.data,
+            origin: 'LOCAL',
+            time_fired: result.data.timestamp || timestamp,
+            context: {},
+            ...result.data,
+            _source: 'database_query',
+            _event_id: result.event_id
+          };
+        }
+      }
+      return event;
+    }
     
-    const startTimeISO = startTime.toISOString();
-    const endTimeISO = endTime.toISOString();
-    
-    console.log('[fetchFullEventData] Querying HA History API:', {
-      startTime: startTimeISO,
-      endTime: endTimeISO
+    // Step 1: Set input_text.event_id_to_query
+    console.log('[fetchFullEventData] Step 1: Setting input_text.event_id_to_query to', event_id);
+    const setInputUrl = `${CONFIG.haUrl}/api/services/input_text/set_value`;
+    const setInputResponse = await fetch(setInputUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CONFIG.haToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        entity_id: 'input_text.event_id_to_query',
+        value: String(event_id)
+      })
     });
     
-    // Build URL for HA History API
-    let url;
-    const options = {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
-    // NOTE: Python scripts cannot access database (import restrictions)
-    // For now, return available event data
-    // TODO: Implement template sensor with SQL query or custom integration for full event data
-    console.warn('[fetchFullEventData] Python script approach not available (import restrictions). Returning available event data.');
-    console.log('[fetchFullEventData] Available event fields:', Object.keys(event));
+    if (!setInputResponse.ok) {
+      const errorText = await setInputResponse.text();
+      console.error('[fetchFullEventData] Failed to set input_text:', setInputResponse.status, errorText);
+      throw new Error(`Failed to set input_text: ${setInputResponse.status}`);
+    }
     
+    console.log('[fetchFullEventData] Step 2: Waiting for SQL sensor to update (max 10 seconds)...');
+    
+    // Step 2: Wait for SQL sensor to update (runs every 5 seconds, so wait up to 10 seconds)
+    const maxWaitTime = 10000; // 10 seconds
+    const checkInterval = 500; // Check every 500ms
+    const startTime = Date.now();
+    let sensorData = null;
+    
+    while (Date.now() - startTime < maxWaitTime) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      
+      // Step 3: Read template sensor result
+      const sensorUrl = `${CONFIG.haUrl}/api/states/sensor.full_event_data_result`;
+      const sensorResponse = await fetch(sensorUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${CONFIG.haToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (sensorResponse.ok) {
+        sensorData = await sensorResponse.json();
+        const sharedData = sensorData.attributes?.shared_data;
+        
+        if (sharedData && sharedData !== '' && sharedData !== 'unknown') {
+          console.log('[fetchFullEventData] Step 3: Success! Found event data');
+          try {
+            // Parse the JSON string from SQL sensor
+            const parsed = typeof sharedData === 'string' ? JSON.parse(sharedData) : sharedData;
+            console.log('[fetchFullEventData] Parsed shared_data with', Object.keys(parsed).length, 'fields');
+            
+            return {
+              event_type: 'app_usage_event',
+              data: parsed,
+              origin: 'LOCAL',
+              time_fired: parsed.timestamp || timestamp,
+              context: {},
+              ...parsed,
+              _source: 'database_query_sql',
+              _event_id: event_id
+            };
+          } catch (e) {
+            console.error('[fetchFullEventData] Error parsing shared_data JSON:', e);
+          }
+        } else {
+          console.log('[fetchFullEventData] Still waiting... sensor state:', sensorData.state, 'shared_data:', sharedData ? 'present' : 'missing');
+        }
+      }
+    }
+    
+    console.warn('[fetchFullEventData] Timeout waiting for SQL sensor update. Returning available event data.');
     return {
       event_type: 'app_usage_event',
       data: event,
@@ -663,9 +732,9 @@ async function fetchFullEventData(event) {
       time_fired: timestamp,
       context: {},
       ...event,
-      _source: 'sensor_data',
-      _note: 'Full event data from database not available. Python scripts cannot access database. Consider using template sensor with SQL query or HA History API.',
-      _limitation: 'HA Python scripts cannot import sqlite3, os, json, or use eval(). Need alternative approach for full webhook data.'
+      _source: 'sensor_data_fallback',
+      _note: 'SQL sensor did not return data within timeout period. Showing available fields only.',
+      _debug: { event_id: event_id, sensor_state: sensorData?.state, sensor_shared_data: sensorData?.attributes?.shared_data ? 'present' : 'missing' }
     };
     
   } catch (error) {
