@@ -83,7 +83,7 @@ body {
   background-size: 12px;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  margin-left: -8px;
+  margin-left: -40px;
 }
 
 .sort-dropdown:hover {
@@ -242,6 +242,10 @@ body {
   font-size: 1.2rem;
   font-weight: 600;
   margin-bottom: 15px;
+}
+
+.app-card[data-app="facility_addresses"] .app-card-header {
+  font-weight: 400;
 }
 
 .app-card[data-app="facility_addresses"] .app-card-header {
