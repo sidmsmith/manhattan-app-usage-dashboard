@@ -408,9 +408,9 @@ body {
   background-color: white;
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-  max-width: 700px;
-  width: 90%;
-  max-height: 80vh;
+  max-width: 1400px;
+  width: 95%;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -467,10 +467,12 @@ body {
   background: #f5f5f5;
   border: 1px solid #ddd;
   border-radius: 6px;
-  padding: 15px;
+  padding: 20px;
   white-space: pre-wrap;
   word-wrap: break-word;
   color: #333;
+  max-height: calc(90vh - 120px);
+  overflow-y: auto;
 }
 
 .event-json-key {
