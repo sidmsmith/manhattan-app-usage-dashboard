@@ -71,12 +71,16 @@ export default async function (req, res) {
     });
 
     if (!shellCommandResponse.ok) {
-      // If shell_command doesn't exist, return empty array for now
-      console.warn('[fetch-recent-events] Shell command not available, returning empty events');
+      const errorText = await shellCommandResponse.text();
+      console.error(`[fetch-recent-events] Shell command failed: ${shellCommandResponse.status} - ${errorText}`);
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-      return res.status(200).json({ events: [] });
+      return res.status(200).json({ 
+        events: [],
+        error: `Shell command failed: ${shellCommandResponse.status}`,
+        details: errorText
+      });
     }
 
     // Step 3: Read the result from command_line sensor
