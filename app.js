@@ -272,8 +272,8 @@ function renderRecentEvents(events) {
     col2.appendChild(item);
   });
 
-  // Display next 6 events (4-9) in column 3
-  events.slice(3, 9).forEach(event => {
+  // Display next 5 events (4-8) in column 3
+  events.slice(3, 8).forEach(event => {
     const item = createEventItem(event);
     col3.appendChild(item);
   });
