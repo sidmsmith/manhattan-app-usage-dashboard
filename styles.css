@@ -244,10 +244,6 @@ body {
   margin-bottom: 15px;
 }
 
-.app-card[data-app="facility_addresses"] .app-card-header {
-  font-weight: 700;
-}
-
 .app-metrics {
   display: flex;
   gap: 15px;
@@ -265,9 +261,6 @@ body {
   margin-bottom: 5px;
 }
 
-.app-card[data-app="facility_addresses"] .app-metric-label {
-  font-weight: 400;
-}
 
 .app-metric-value {
   font-size: 24px;
