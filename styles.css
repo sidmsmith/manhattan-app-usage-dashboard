@@ -84,7 +84,8 @@ body {
 }
 
 .sort-dropdown:hover {
-  border-color: #999;
+  border-color: #bbb;
+  background: #eeeeee;
   box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 
