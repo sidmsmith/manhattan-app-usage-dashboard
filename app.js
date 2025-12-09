@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.1.6';
+const DASHBOARD_VERSION = '0.1.7';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -282,9 +282,34 @@ function renderRecentEvents(events) {
 
 // Convert UTC timestamp to local time (24-hour format)
 function formatLocalTime(utcTimestamp) {
-  const dt = new Date(utcTimestamp);
+  // Ensure timestamp is treated as UTC (add Z if not present, or parse as ISO)
+  let timestamp = utcTimestamp;
+  if (!timestamp.endsWith('Z') && !timestamp.includes('+') && !timestamp.includes('-', 10)) {
+    // If no timezone indicator, assume it's UTC and add Z
+    timestamp = timestamp.endsWith('Z') ? timestamp : timestamp + 'Z';
+  }
+  
+  // Parse as UTC and convert to local time
+  const dt = new Date(timestamp);
+  
+  // Verify it's a valid date
+  if (isNaN(dt.getTime())) {
+    console.warn('[formatLocalTime] Invalid timestamp:', utcTimestamp);
+    // Fallback: try parsing without Z
+    const dtFallback = new Date(utcTimestamp);
+    if (!isNaN(dtFallback.getTime())) {
+      const mmdd = `${String(dtFallback.getMonth() + 1).padStart(2, '0')}/${String(dtFallback.getDate()).padStart(2, '0')}`;
+      const time = `${String(dtFallback.getHours()).padStart(2, '0')}:${String(dtFallback.getMinutes()).padStart(2, '0')}`;
+      return { mmdd, time };
+    }
+    return { mmdd: '??/??', time: '??:??' };
+  }
+  
   const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
   const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+  
+  console.log('[formatLocalTime] UTC timestamp:', utcTimestamp, '→ Local time:', `${mmdd} ${time}`);
+  
   return { mmdd, time };
 }
 
@@ -579,7 +604,9 @@ function closeEventModal() {
 }
 
 // Fetch full event data from Home Assistant
-// Uses the Python script service to query the database for full event data
+// NOTE: Python scripts cannot access database (no sqlite3, os, json imports allowed)
+// For now, we'll use HA's History API or return available event data
+// Future: Create template sensor with SQL query or custom integration
 async function fetchFullEventData(event) {
   console.log('[fetchFullEventData] Starting fetch for event:', {
     event_id: event.event_id,
@@ -595,173 +622,40 @@ async function fetchFullEventData(event) {
     const event_name = event.event_name;
     const app_name = event.app_name;
     
-    // Prefer event_id if available (most reliable)
-    if (event_id) {
-      console.log('[fetchFullEventData] Using event_id for lookup:', event_id);
-    } else if (!timestamp) {
-      console.warn('[fetchFullEventData] No event_id or timestamp in event, cannot fetch full data');
+    if (!timestamp) {
+      console.warn('[fetchFullEventData] No timestamp in event, cannot fetch full data');
       return event;
     }
     
-    // Build URL for calling the Python script service
+    // Try using HA's History API to get more event details
+    // Calculate time window: 30 seconds before and after the event timestamp
+    const eventTime = new Date(timestamp);
+    const startTime = new Date(eventTime.getTime() - 30000); // 30 seconds before
+    const endTime = new Date(eventTime.getTime() + 30000);   // 30 seconds after
+    
+    const startTimeISO = startTime.toISOString();
+    const endTimeISO = endTime.toISOString();
+    
+    console.log('[fetchFullEventData] Querying HA History API:', {
+      startTime: startTimeISO,
+      endTime: endTimeISO
+    });
+    
+    // Build URL for HA History API
     let url;
     const options = {
-      method: 'POST',
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        timestamp: timestamp,
-        event_name: event_name,
-        app_name: app_name
-      })
+      }
     };
 
-    // If we have direct HA config (local dev), use it directly
-    if (CONFIG.haUrl && CONFIG.haToken) {
-      url = `${CONFIG.haUrl}/api/services/python_script/get_full_event_data`;
-      options.headers['Authorization'] = `Bearer ${CONFIG.haToken}`;
-      
-      console.log('[fetchFullEventData] Calling Python script service:', url);
-      console.log('[fetchFullEventData] Request payload:', JSON.stringify(JSON.parse(options.body), null, 2));
-      
-      const response = await fetch(url, options);
-      
-      console.log('[fetchFullEventData] Service call response status:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[fetchFullEventData] Service call failed:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      // After calling the service, wait a moment for the sensor to update
-      console.log('[fetchFullEventData] Waiting 500ms for sensor to update...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Now read the result from the sensor
-      const sensorUrl = `${CONFIG.haUrl}/api/states/sensor.full_event_data_result`;
-      console.log('[fetchFullEventData] Reading sensor result from:', sensorUrl);
-      
-      const sensorResponse = await fetch(sensorUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${CONFIG.haToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('[fetchFullEventData] Sensor read response status:', sensorResponse.status);
-
-      if (sensorResponse.ok) {
-        const sensorData = await sensorResponse.json();
-        console.log('[fetchFullEventData] Sensor data received:', {
-          state: sensorData.state,
-          hasSharedData: !!sensorData.attributes?.shared_data,
-          hasRawData: !!sensorData.attributes?.raw_data,
-          attributes: Object.keys(sensorData.attributes || {})
-        });
-        
-        // Python script returns shared_data as JSON string
-        const sharedData = sensorData.attributes?.shared_data;
-        
-        if (sharedData) {
-          try {
-            const parsed = typeof sharedData === 'string' ? JSON.parse(sharedData) : sharedData;
-            console.log('[fetchFullEventData] Success! Parsed shared_data with', Object.keys(parsed).length, 'fields');
-            return {
-              event_type: 'app_usage_event',
-              data: parsed,
-              origin: 'LOCAL',
-              time_fired: timestamp || parsed.timestamp,
-              context: {},
-              ...parsed,
-              _source: 'database_query',
-              _event_id: sensorData.attributes?.event_id
-            };
-          } catch (e) {
-            console.error('[fetchFullEventData] Error parsing shared_data:', e);
-          }
-        }
-        
-        // Fallback to raw_data if shared_data not available
-        const rawData = sensorData.attributes?.raw_data;
-        if (rawData && typeof rawData === 'object') {
-          console.log('[fetchFullEventData] Success! Using raw_data with', Object.keys(rawData).length, 'fields');
-          return {
-            event_type: 'app_usage_event',
-            data: rawData,
-            origin: 'LOCAL',
-            time_fired: timestamp,
-            context: {},
-            ...rawData,
-            _source: 'database_query',
-            _event_id: sensorData.attributes?.event_id
-          };
-        } else {
-          console.warn('[fetchFullEventData] Sensor data found but no shared_data or raw_data. Sensor state:', sensorData.state);
-        }
-      } else {
-        const errorText = await sensorResponse.text();
-        console.error('[fetchFullEventData] Sensor read failed:', sensorResponse.status, errorText);
-      }
-    } else {
-      // Use Vercel serverless function (production)
-      // The serverless function will handle both the service call and sensor read
-      if (event_id) {
-        url = `/api/fetch-full-event?event_id=${encodeURIComponent(event_id)}`;
-      } else {
-        url = `/api/fetch-full-event?timestamp=${encodeURIComponent(timestamp)}`;
-        if (event_name) url += `&event_name=${encodeURIComponent(event_name)}`;
-        if (app_name) url += `&app_name=${encodeURIComponent(app_name)}`;
-      }
-      
-      console.log('[fetchFullEventData] Using serverless function:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('[fetchFullEventData] Serverless response status:', response.status);
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[fetchFullEventData] Serverless result:', {
-          success: result.success,
-          hasData: !!result.data,
-          message: result.message
-        });
-        
-        if (result.success && result.data) {
-          console.log('[fetchFullEventData] Success! Returning serverless data with', Object.keys(result.data).length, 'fields');
-          return {
-            event_type: 'app_usage_event',
-            data: result.data,
-            origin: 'LOCAL',
-            time_fired: result.data.timestamp || timestamp,
-            context: {},
-            ...result.data,
-            _source: 'database_query',
-            _event_id: result.event_id
-          };
-        } else {
-          console.warn('[fetchFullEventData] Serverless returned success=false:', result.message);
-          if (result.debug) {
-            console.log('[fetchFullEventData] Debug info:', result.debug);
-          }
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('[fetchFullEventData] Serverless call failed:', response.status, errorText);
-      }
-    }
-    
-    // Fallback: return what we have
-    console.warn('[fetchFullEventData] Could not fetch full event data from database, using available fields');
+    // NOTE: Python scripts cannot access database (import restrictions)
+    // For now, return available event data
+    // TODO: Implement template sensor with SQL query or custom integration for full event data
+    console.warn('[fetchFullEventData] Python script approach not available (import restrictions). Returning available event data.');
     console.log('[fetchFullEventData] Available event fields:', Object.keys(event));
+    
     return {
       event_type: 'app_usage_event',
       data: event,
@@ -769,14 +663,9 @@ async function fetchFullEventData(event) {
       time_fired: timestamp,
       context: {},
       ...event,
-      _source: 'sensor_data_fallback',
-      _note: 'Full event data query failed or not configured. Showing available fields only.',
-      _debug: {
-        timestamp: timestamp,
-        event_name: event_name,
-        app_name: app_name,
-        hasConfig: !!(CONFIG.haUrl && CONFIG.haToken)
-      }
+      _source: 'sensor_data',
+      _note: 'Full event data from database not available. Python scripts cannot access database. Consider using template sensor with SQL query or HA History API.',
+      _limitation: 'HA Python scripts cannot import sqlite3, os, json, or use eval(). Need alternative approach for full webhook data.'
     };
     
   } catch (error) {
