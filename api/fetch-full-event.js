@@ -138,10 +138,14 @@ export default async function (req, res) {
     
   } catch (error) {
     console.error('[fetch-full-event] Error:', error);
+    console.error('[fetch-full-event] Error stack:', error.stack);
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return res.status(500).json({ 
       error: 'Failed to fetch full event data',
-      message: error.message 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
