@@ -264,8 +264,8 @@ function renderRecentEvents(events) {
 
   col2.innerHTML = '';
 
-  // Display first 6 events in column 2
-  events.slice(0, 6).forEach(event => {
+  // Display first 3 events in column 2
+  events.slice(0, 3).forEach(event => {
     const item = createEventItem(event);
     col2.appendChild(item);
   });
