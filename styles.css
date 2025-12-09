@@ -28,7 +28,7 @@ body {
 
 .header-content {
   display: grid;
-  grid-template-columns: 30% 70%;
+  grid-template-columns: 30% 35% 35%;
   gap: 12px;
   width: 100%;
 }
