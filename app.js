@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.0.11';
+const DASHBOARD_VERSION = '0.0.12';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -28,17 +28,17 @@ if (typeof window.CONFIG === 'undefined') {
 
 // App definitions with display names
 const APPS = [
-  { id: 'lpn_unlock_app', name: 'LPN Unlock App', icon: '🔓' },
+  { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️' },
-  { id: 'appt_app', name: 'APPT App', icon: '📅' },
+  { id: 'appt_app', name: 'Check In Kiosk', icon: '📅' },
   { id: 'pos_items', name: 'POS Items', icon: '📦' },
   { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚' },
   { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍' },
   { id: 'forecast_import', name: 'Import Forecast', icon: '📊' },
   { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠' },
-  { id: 'item_generator_gallery', name: 'Item Generator Gallery', icon: '🖼️' },
+  { id: 'item_generator_gallery', name: 'Item Generator', icon: '🖼️' },
   { id: 'order_generator', name: 'Order Generator', icon: '📋' },
-  { id: 'schedule_app', name: 'Schedule App', icon: '📆' },
+  { id: 'schedule_app', name: 'Schedule Appointment', icon: '📆' },
   { id: 'todolist', name: 'Todo List', icon: '✅' },
   { id: 'update_appt', name: 'Update Appointment', icon: '✏️' },
 ];
