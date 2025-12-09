@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.1.3';
+const DASHBOARD_VERSION = '0.1.4';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -560,69 +560,134 @@ function closeEventModal() {
 }
 
 // Fetch full event data from Home Assistant
-// Note: HA stores full webhook data in events table, but REST API doesn't expose it directly
-// We need to check if there's a sensor that stores the full data, or use a custom SQL query
+// Uses the Python script service to query the database for full event data
 async function fetchFullEventData(event) {
   try {
-    // First, check if the event object already has all the fields we need
-    // The SQL queries might be storing the full data in a specific field
-    // Let's check for common field names that might contain the full payload
-    const possibleFullDataFields = [
-      'full_data',
-      'event_data',
-      'webhook_data',
-      'raw_data',
-      'data',
-      'payload',
-      'metadata'
-    ];
+    const timestamp = event.timestamp;
+    const event_name = event.event_name;
+    const app_name = event.app_name;
     
-    // Check if any of these fields exist and contain more data
-    for (const field of possibleFullDataFields) {
-      if (event[field] && typeof event[field] === 'object') {
-        // This might be the full data field
-        const fullData = event[field];
-        if (Object.keys(fullData).length > Object.keys(event).length / 2) {
-          // This field has significantly more data, use it
+    if (!timestamp) {
+      console.warn('No timestamp in event, cannot fetch full data');
+      return event;
+    }
+    
+    // Build URL for calling the Python script service
+    let url;
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        timestamp: timestamp,
+        event_name: event_name,
+        app_name: app_name
+      })
+    };
+
+    // If we have direct HA config (local dev), use it directly
+    if (CONFIG.haUrl && CONFIG.haToken) {
+      url = `${CONFIG.haUrl}/api/services/python_script/get_full_event_data`;
+      options.headers['Authorization'] = `Bearer ${CONFIG.haToken}`;
+      
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // After calling the service, wait a moment for the sensor to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Now read the result from the sensor
+      const sensorUrl = `${CONFIG.haUrl}/api/states/sensor.full_event_data_result`;
+      
+      const sensorResponse = await fetch(sensorUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${CONFIG.haToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (sensorResponse.ok) {
+        const sensorData = await sensorResponse.json();
+        const rawData = sensorData.attributes?.raw_data;
+        const fullDataJson = sensorData.attributes?.full_data_json;
+        
+        if (rawData && typeof rawData === 'object') {
+          // We have the full event data!
           return {
             event_type: 'app_usage_event',
-            data: fullData,
+            data: rawData,
             origin: 'LOCAL',
-            time_fired: event.timestamp,
+            time_fired: timestamp,
             context: {},
-            ...fullData,
-            _source: 'event_data_field',
-            _field_name: field
+            ...rawData,
+            _source: 'database_query',
+            _event_id: sensorData.attributes?.event_id
+          };
+        } else if (fullDataJson) {
+          // Parse JSON string if needed
+          try {
+            const parsed = typeof fullDataJson === 'string' ? JSON.parse(fullDataJson) : fullDataJson;
+            return {
+              event_type: 'app_usage_event',
+              data: parsed,
+              origin: 'LOCAL',
+              time_fired: timestamp,
+              context: {},
+              ...parsed,
+              _source: 'database_query_json'
+            };
+          } catch (e) {
+            console.error('Error parsing full_data_json:', e);
+          }
+        }
+      }
+    } else {
+      // Use Vercel serverless function (production)
+      // The serverless function will handle both the service call and sensor read
+      url = `/api/fetch-full-event?timestamp=${encodeURIComponent(timestamp)}`;
+      if (event_name) url += `&event_name=${encodeURIComponent(event_name)}`;
+      if (app_name) url += `&app_name=${encodeURIComponent(app_name)}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          return {
+            event_type: 'app_usage_event',
+            data: result.data,
+            origin: 'LOCAL',
+            time_fired: timestamp,
+            context: {},
+            ...result.data,
+            _source: 'database_query',
+            _event_id: result.event_id
           };
         }
       }
     }
     
-    // Try to fetch from HA using the event timestamp
-    // HA's logbook/history APIs don't return full event data, but let's try anyway
-    const eventTime = new Date(event.timestamp);
-    const startTime = new Date(eventTime.getTime() - 300000); // 5 minutes before
-    const endTime = new Date(eventTime.getTime() + 300000); // 5 minutes after
-    
-    const startTimeISO = startTime.toISOString();
-    const endTimeISO = endTime.toISOString();
-    
-    // Try using HA's template API or a custom sensor if available
-    // For now, we'll need to rely on what's in the event object
-    // The full data should be accessible if the SQL queries store it
-    
-    // Return the event with all its fields - the SQL query should have extracted everything
-    // If fields are missing, they're not in the SQL query results
+    // Fallback: return what we have
+    console.warn('Could not fetch full event data from database, using available fields');
     return {
       event_type: 'app_usage_event',
-      data: event, // All fields from the SQL query
+      data: event,
       origin: 'LOCAL',
-      time_fired: event.timestamp,
+      time_fired: timestamp,
       context: {},
-      // Include all fields from event at top level
       ...event,
-      _source: 'sensor_sql_data',
-      _note: 'Displaying all fields available from SQL sensor query. If fields are missing, they may need to be added to the SQL query in HA configuration.yaml'
+      _source: 'sensor_data_fallback',
+      _note: 'Full event data query failed or not configured. Showing available fields only.'
     };
     
   } catch (error) {
@@ -635,7 +700,7 @@ async function fetchFullEventData(event) {
       time_fired: event.timestamp,
       context: {},
       ...event,
-      _source: 'sensor_data_fallback',
+      _source: 'sensor_data_error',
       _error: error.message
     };
   }
