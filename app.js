@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.0.17';
+const DASHBOARD_VERSION = '0.0.18';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
