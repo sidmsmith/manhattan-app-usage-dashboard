@@ -553,7 +553,6 @@ async function openEventModal(event) {
     const formattedJson = formatEventJson(event);
     modalBody.innerHTML = `<div class="event-json-viewer">${formattedJson}<br/><br/><em>Note: Could not fetch full event data from HA. Showing available data.</em><br/><br/><strong>Error:</strong> ${error.message}</div>`;
   }
-}
   
   // Close on background click
   modal.addEventListener('click', function closeOnBackground(e) {
@@ -611,17 +610,26 @@ async function fetchFullEventData(event) {
       url = `${CONFIG.haUrl}/api/services/python_script/get_full_event_data`;
       options.headers['Authorization'] = `Bearer ${CONFIG.haToken}`;
       
+      console.log('[fetchFullEventData] Calling Python script service:', url);
+      console.log('[fetchFullEventData] Request payload:', JSON.stringify(JSON.parse(options.body), null, 2));
+      
       const response = await fetch(url, options);
+      
+      console.log('[fetchFullEventData] Service call response status:', response.status, response.statusText);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[fetchFullEventData] Service call failed:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       // After calling the service, wait a moment for the sensor to update
+      console.log('[fetchFullEventData] Waiting 500ms for sensor to update...');
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Now read the result from the sensor
       const sensorUrl = `${CONFIG.haUrl}/api/states/sensor.full_event_data_result`;
+      console.log('[fetchFullEventData] Reading sensor result from:', sensorUrl);
       
       const sensorResponse = await fetch(sensorUrl, {
         method: 'GET',
@@ -631,12 +639,22 @@ async function fetchFullEventData(event) {
         }
       });
 
+      console.log('[fetchFullEventData] Sensor read response status:', sensorResponse.status);
+
       if (sensorResponse.ok) {
         const sensorData = await sensorResponse.json();
+        console.log('[fetchFullEventData] Sensor data received:', {
+          state: sensorData.state,
+          hasRawData: !!sensorData.attributes?.raw_data,
+          hasFullDataJson: !!sensorData.attributes?.full_data_json,
+          attributes: Object.keys(sensorData.attributes || {})
+        });
+        
         const rawData = sensorData.attributes?.raw_data;
         const fullDataJson = sensorData.attributes?.full_data_json;
         
         if (rawData && typeof rawData === 'object') {
+          console.log('[fetchFullEventData] Success! Returning raw_data with', Object.keys(rawData).length, 'fields');
           // We have the full event data!
           return {
             event_type: 'app_usage_event',
@@ -649,9 +667,11 @@ async function fetchFullEventData(event) {
             _event_id: sensorData.attributes?.event_id
           };
         } else if (fullDataJson) {
+          console.log('[fetchFullEventData] Attempting to parse full_data_json...');
           // Parse JSON string if needed
           try {
             const parsed = typeof fullDataJson === 'string' ? JSON.parse(fullDataJson) : fullDataJson;
+            console.log('[fetchFullEventData] Success! Parsed full_data_json with', Object.keys(parsed).length, 'fields');
             return {
               event_type: 'app_usage_event',
               data: parsed,
@@ -662,9 +682,14 @@ async function fetchFullEventData(event) {
               _source: 'database_query_json'
             };
           } catch (e) {
-            console.error('Error parsing full_data_json:', e);
+            console.error('[fetchFullEventData] Error parsing full_data_json:', e);
           }
+        } else {
+          console.warn('[fetchFullEventData] Sensor data found but no raw_data or full_data_json. Sensor state:', sensorData.state);
         }
+      } else {
+        const errorText = await sensorResponse.text();
+        console.error('[fetchFullEventData] Sensor read failed:', sensorResponse.status, errorText);
       }
     } else {
       // Use Vercel serverless function (production)
@@ -673,6 +698,8 @@ async function fetchFullEventData(event) {
       if (event_name) url += `&event_name=${encodeURIComponent(event_name)}`;
       if (app_name) url += `&app_name=${encodeURIComponent(app_name)}`;
       
+      console.log('[fetchFullEventData] Using serverless function:', url);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -680,9 +707,18 @@ async function fetchFullEventData(event) {
         }
       });
       
+      console.log('[fetchFullEventData] Serverless response status:', response.status);
+      
       if (response.ok) {
         const result = await response.json();
+        console.log('[fetchFullEventData] Serverless result:', {
+          success: result.success,
+          hasData: !!result.data,
+          message: result.message
+        });
+        
         if (result.success && result.data) {
+          console.log('[fetchFullEventData] Success! Returning serverless data with', Object.keys(result.data).length, 'fields');
           return {
             event_type: 'app_usage_event',
             data: result.data,
@@ -693,7 +729,12 @@ async function fetchFullEventData(event) {
             _source: 'database_query',
             _event_id: result.event_id
           };
+        } else {
+          console.warn('[fetchFullEventData] Serverless returned success=false:', result.message);
         }
+      } else {
+        const errorText = await response.text();
+        console.error('[fetchFullEventData] Serverless call failed:', response.status, errorText);
       }
     }
     
