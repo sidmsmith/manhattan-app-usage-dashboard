@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.0.18';
+const DASHBOARD_VERSION = '0.0.19';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -473,6 +473,17 @@ function createAppEventItem(event) {
   const dt = new Date(event.timestamp);
   const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
   const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+
+  // Calculate days since event (date only, not time)
+  const today = new Date();
+  const eventDate = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const daysDiff = Math.floor((todayDate - eventDate) / (1000 * 60 * 60 * 24));
+  
+  // Add class for events older than 3 days
+  if (daysDiff > 3) {
+    div.classList.add('event-old');
+  }
 
   const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   const org = event.org || 'N/A';
