@@ -1,3 +1,6 @@
+// Dashboard Version - Update this with each push to main
+const DASHBOARD_VERSION = '0.0.2';
+
 // Configuration
 // For Vercel: environment variables are available via process.env
 // For local dev: create a config.js file (not committed to git)
@@ -47,12 +50,24 @@ let sortableInstance = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  // Update version in header
+  updateVersionDisplay();
   loadSortOrder();
   initializeSortable();
   setupEventListeners();
   loadDashboardData();
   setInterval(loadDashboardData, CONFIG.refreshInterval);
 });
+
+// Update version display in header
+function updateVersionDisplay() {
+  const versionBadge = document.querySelector('.version-badge');
+  if (versionBadge) {
+    versionBadge.textContent = `v${DASHBOARD_VERSION}`;
+  }
+  // Also update page title
+  document.title = `Manhattan App Usage Dashboard v${DASHBOARD_VERSION}`;
+}
 
 // Load saved sort order from localStorage
 function loadSortOrder() {
@@ -182,7 +197,17 @@ async function loadOverallSummary() {
     document.getElementById('total-opens').textContent = totalOpens.state || '0';
   }
   if (recentEvents && recentEvents.attributes?.events) {
-    renderRecentEvents(recentEvents.attributes.events);
+    let events = recentEvents.attributes.events;
+    // Parse if it's a JSON string
+    if (typeof events === 'string') {
+      try {
+        events = JSON.parse(events);
+      } catch (e) {
+        console.error('Failed to parse events JSON:', e);
+        events = [];
+      }
+    }
+    renderRecentEvents(Array.isArray(events) ? events : []);
   }
 }
 
@@ -196,6 +221,21 @@ async function loadAppData() {
       fetchSensorData(`sensor.${app.id}_recent_events`)
     ]);
 
+    // Parse events if it's a JSON string
+    let events = recentEvents?.attributes?.events || [];
+    if (typeof events === 'string') {
+      try {
+        events = JSON.parse(events);
+      } catch (e) {
+        console.error(`Failed to parse events JSON for ${app.id}:`, e);
+        events = [];
+      }
+    }
+    // Ensure it's an array
+    if (!Array.isArray(events)) {
+      events = [];
+    }
+
     return {
       id: app.id,
       name: app.name,
@@ -203,7 +243,7 @@ async function loadAppData() {
       totalEvents: totalEvents?.state || '0',
       events24h: events24h?.state || '0',
       totalOpens: totalOpens?.state || '0',
-      recentEvents: recentEvents?.attributes?.events || []
+      recentEvents: events
     };
   });
 
@@ -402,7 +442,7 @@ function createAppCard(app) {
   const eventsList = document.createElement('div');
   eventsList.className = 'app-events-list';
 
-  if (app.recentEvents && app.recentEvents.length > 0) {
+  if (app.recentEvents && Array.isArray(app.recentEvents) && app.recentEvents.length > 0) {
     app.recentEvents.slice(0, 5).forEach(event => {
       const item = createAppEventItem(event);
       eventsList.appendChild(item);

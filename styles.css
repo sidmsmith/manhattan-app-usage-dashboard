@@ -55,6 +55,13 @@ body {
   white-space: nowrap;
 }
 
+.version-badge {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: #666;
+  margin-left: 4px;
+}
+
 .sort-dropdown {
   font-size: 0.7rem;
   padding: 2px 6px;

@@ -1,0 +1,8 @@
+{
+  "name": "manhattan-app-usage-dashboard",
+  "version": "1.0.0",
+  "description": "Manhattan App Usage Dashboard",
+  "scripts": {
+    "dev": "python -m http.server 8000"
+  }
+}
