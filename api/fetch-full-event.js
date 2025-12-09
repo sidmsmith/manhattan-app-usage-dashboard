@@ -67,7 +67,7 @@ export default async function (req, res) {
     while (Date.now() - startTime < maxWaitTime) {
       await new Promise(resolve => setTimeout(resolve, checkInterval));
       
-      // Read file sensor result
+      // Read command_line sensor result
       const sensorUrl = `${HA_URL}/api/states/sensor.event_query_result_file`;
       const sensorResponse = await fetch(sensorUrl, {
         method: 'GET',

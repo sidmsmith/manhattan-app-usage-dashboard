@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.2.0';
+const DASHBOARD_VERSION = '0.2.1';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -700,7 +700,7 @@ async function fetchFullEventData(event) {
     while (Date.now() - startTime < maxWaitTime) {
       await new Promise(resolve => setTimeout(resolve, checkInterval));
       
-      // Read file sensor result
+      // Read command_line sensor result
       const sensorUrl = `${CONFIG.haUrl}/api/states/sensor.event_query_result_file`;
       const sensorResponse = await fetch(sensorUrl, {
         method: 'GET',
