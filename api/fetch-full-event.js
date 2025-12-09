@@ -5,10 +5,10 @@ export default async function (req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { timestamp, event_name, app_name } = req.query;
+  const { event_id, timestamp, event_name, app_name } = req.query;
 
-  if (!timestamp) {
-    return res.status(400).json({ error: 'timestamp is required' });
+  if (!event_id && !timestamp) {
+    return res.status(400).json({ error: 'event_id or timestamp is required' });
   }
 
   const HA_URL = process.env.HA_URL;
@@ -29,7 +29,8 @@ export default async function (req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        timestamp: timestamp,
+        event_id: event_id || null,
+        timestamp: timestamp || null,
         event_name: event_name || null,
         app_name: app_name || null
       })
@@ -59,19 +60,36 @@ export default async function (req, res) {
 
     const sensorData = await sensorResponse.json();
     
-    // Extract the full event data
-    const rawData = sensorData.attributes?.raw_data;
-    const fullDataJson = sensorData.attributes?.full_data_json;
+    // Extract the full event data - Python script returns shared_data as JSON string
+    const sharedData = sensorData.attributes?.shared_data;
     
     let fullEventData = null;
     
-    if (rawData && typeof rawData === 'object') {
-      fullEventData = rawData;
-    } else if (fullDataJson) {
+    if (sharedData) {
       try {
-        fullEventData = typeof fullDataJson === 'string' ? JSON.parse(fullDataJson) : fullDataJson;
+        // Parse the JSON string from Python script
+        fullEventData = typeof sharedData === 'string' ? JSON.parse(sharedData) : sharedData;
       } catch (e) {
-        console.error('Error parsing full_data_json:', e);
+        console.error('Error parsing shared_data JSON:', e);
+        // Fallback to raw_data if available
+        const rawData = sensorData.attributes?.raw_data;
+        if (rawData && typeof rawData === 'object') {
+          fullEventData = rawData;
+        }
+      }
+    } else {
+      // Fallback to raw_data or full_data_json
+      const rawData = sensorData.attributes?.raw_data;
+      const fullDataJson = sensorData.attributes?.full_data_json;
+      
+      if (rawData && typeof rawData === 'object') {
+        fullEventData = rawData;
+      } else if (fullDataJson) {
+        try {
+          fullEventData = typeof fullDataJson === 'string' ? JSON.parse(fullDataJson) : fullDataJson;
+        } catch (e) {
+          console.error('Error parsing full_data_json:', e);
+        }
       }
     }
     
@@ -95,9 +113,11 @@ export default async function (req, res) {
         sensor_state: sensorData.state,
         attributes: sensorData.attributes,
         debug: {
+          requested_event_id: event_id,
           requested_timestamp: timestamp,
           requested_event_name: event_name,
           requested_app_name: app_name,
+          sensor_event_id: sensorData.attributes?.event_id,
           sensor_timestamp: sensorData.attributes?.timestamp,
           sensor_event_name: sensorData.attributes?.event_name,
           sensor_app_name: sensorData.attributes?.app_name,

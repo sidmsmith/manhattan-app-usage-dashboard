@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.1.5';
+const DASHBOARD_VERSION = '0.1.6';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -280,14 +280,21 @@ function renderRecentEvents(events) {
   });
 }
 
+// Convert UTC timestamp to local time (24-hour format)
+function formatLocalTime(utcTimestamp) {
+  const dt = new Date(utcTimestamp);
+  const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
+  const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+  return { mmdd, time };
+}
+
 // Create event item element (for header card - reversed format: App bold, then Event)
 function createEventItem(event) {
   const div = document.createElement('div');
   div.className = 'event-item';
 
-  const dt = new Date(event.timestamp);
-  const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
-  const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+  // Convert UTC to local time
+  const { mmdd, time } = formatLocalTime(event.timestamp);
 
   // Store full event data for modal
   div.dataset.eventData = JSON.stringify(event);
@@ -575,6 +582,7 @@ function closeEventModal() {
 // Uses the Python script service to query the database for full event data
 async function fetchFullEventData(event) {
   console.log('[fetchFullEventData] Starting fetch for event:', {
+    event_id: event.event_id,
     timestamp: event.timestamp,
     event_name: event.event_name,
     app_name: event.app_name,
@@ -582,12 +590,16 @@ async function fetchFullEventData(event) {
   });
   
   try {
+    const event_id = event.event_id;
     const timestamp = event.timestamp;
     const event_name = event.event_name;
     const app_name = event.app_name;
     
-    if (!timestamp) {
-      console.warn('[fetchFullEventData] No timestamp in event, cannot fetch full data');
+    // Prefer event_id if available (most reliable)
+    if (event_id) {
+      console.log('[fetchFullEventData] Using event_id for lookup:', event_id);
+    } else if (!timestamp) {
+      console.warn('[fetchFullEventData] No event_id or timestamp in event, cannot fetch full data');
       return event;
     }
     
@@ -645,17 +657,37 @@ async function fetchFullEventData(event) {
         const sensorData = await sensorResponse.json();
         console.log('[fetchFullEventData] Sensor data received:', {
           state: sensorData.state,
+          hasSharedData: !!sensorData.attributes?.shared_data,
           hasRawData: !!sensorData.attributes?.raw_data,
-          hasFullDataJson: !!sensorData.attributes?.full_data_json,
           attributes: Object.keys(sensorData.attributes || {})
         });
         
-        const rawData = sensorData.attributes?.raw_data;
-        const fullDataJson = sensorData.attributes?.full_data_json;
+        // Python script returns shared_data as JSON string
+        const sharedData = sensorData.attributes?.shared_data;
         
+        if (sharedData) {
+          try {
+            const parsed = typeof sharedData === 'string' ? JSON.parse(sharedData) : sharedData;
+            console.log('[fetchFullEventData] Success! Parsed shared_data with', Object.keys(parsed).length, 'fields');
+            return {
+              event_type: 'app_usage_event',
+              data: parsed,
+              origin: 'LOCAL',
+              time_fired: timestamp || parsed.timestamp,
+              context: {},
+              ...parsed,
+              _source: 'database_query',
+              _event_id: sensorData.attributes?.event_id
+            };
+          } catch (e) {
+            console.error('[fetchFullEventData] Error parsing shared_data:', e);
+          }
+        }
+        
+        // Fallback to raw_data if shared_data not available
+        const rawData = sensorData.attributes?.raw_data;
         if (rawData && typeof rawData === 'object') {
-          console.log('[fetchFullEventData] Success! Returning raw_data with', Object.keys(rawData).length, 'fields');
-          // We have the full event data!
+          console.log('[fetchFullEventData] Success! Using raw_data with', Object.keys(rawData).length, 'fields');
           return {
             event_type: 'app_usage_event',
             data: rawData,
@@ -666,26 +698,8 @@ async function fetchFullEventData(event) {
             _source: 'database_query',
             _event_id: sensorData.attributes?.event_id
           };
-        } else if (fullDataJson) {
-          console.log('[fetchFullEventData] Attempting to parse full_data_json...');
-          // Parse JSON string if needed
-          try {
-            const parsed = typeof fullDataJson === 'string' ? JSON.parse(fullDataJson) : fullDataJson;
-            console.log('[fetchFullEventData] Success! Parsed full_data_json with', Object.keys(parsed).length, 'fields');
-            return {
-              event_type: 'app_usage_event',
-              data: parsed,
-              origin: 'LOCAL',
-              time_fired: timestamp,
-              context: {},
-              ...parsed,
-              _source: 'database_query_json'
-            };
-          } catch (e) {
-            console.error('[fetchFullEventData] Error parsing full_data_json:', e);
-          }
         } else {
-          console.warn('[fetchFullEventData] Sensor data found but no raw_data or full_data_json. Sensor state:', sensorData.state);
+          console.warn('[fetchFullEventData] Sensor data found but no shared_data or raw_data. Sensor state:', sensorData.state);
         }
       } else {
         const errorText = await sensorResponse.text();
@@ -694,9 +708,13 @@ async function fetchFullEventData(event) {
     } else {
       // Use Vercel serverless function (production)
       // The serverless function will handle both the service call and sensor read
-      url = `/api/fetch-full-event?timestamp=${encodeURIComponent(timestamp)}`;
-      if (event_name) url += `&event_name=${encodeURIComponent(event_name)}`;
-      if (app_name) url += `&app_name=${encodeURIComponent(app_name)}`;
+      if (event_id) {
+        url = `/api/fetch-full-event?event_id=${encodeURIComponent(event_id)}`;
+      } else {
+        url = `/api/fetch-full-event?timestamp=${encodeURIComponent(timestamp)}`;
+        if (event_name) url += `&event_name=${encodeURIComponent(event_name)}`;
+        if (app_name) url += `&app_name=${encodeURIComponent(app_name)}`;
+      }
       
       console.log('[fetchFullEventData] Using serverless function:', url);
       
@@ -723,7 +741,7 @@ async function fetchFullEventData(event) {
             event_type: 'app_usage_event',
             data: result.data,
             origin: 'LOCAL',
-            time_fired: timestamp,
+            time_fired: result.data.timestamp || timestamp,
             context: {},
             ...result.data,
             _source: 'database_query',
@@ -731,6 +749,9 @@ async function fetchFullEventData(event) {
           };
         } else {
           console.warn('[fetchFullEventData] Serverless returned success=false:', result.message);
+          if (result.debug) {
+            console.log('[fetchFullEventData] Debug info:', result.debug);
+          }
         }
       } else {
         const errorText = await response.text();
