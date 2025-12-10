@@ -1,0 +1,79 @@
+# MariaDB Configuration for Manhattan App Usage Dashboard
+# 
+# This file documents the MariaDB connection details
+# DO NOT commit actual passwords to git - use environment variables or secrets
+
+# Database Connection Details
+database:
+  name: manhattan_app_usage
+  host: localhost  # For HA add-on, use 'localhost' or 'core-mariadb'
+  port: 3306
+  charset: utf8mb4
+  collation: utf8mb4_unicode_ci
+
+# User Credentials
+# IMPORTANT: Change the password in the SQL script!
+users:
+  dashboard_user:
+    username: dashboard_user
+    password: your_secure_password  # CHANGE THIS in mariadb_setup.sql
+    permissions:
+      - SELECT
+      - INSERT
+      - UPDATE
+      - DELETE
+    databases:
+      - manhattan_app_usage
+
+# Connection Strings
+connection_strings:
+  # For Python script (if using pymysql)
+  python: "mysql://dashboard_user:your_secure_password@localhost:3306/manhattan_app_usage"
+  
+  # For Node.js (if using mysql2)
+  nodejs: "mysql://dashboard_user:your_secure_password@localhost:3306/manhattan_app_usage"
+  
+  # For SQL sensors in HA
+  ha_sql: "mysql://dashboard_user:your_secure_password@core-mariadb:3306/manhattan_app_usage"
+
+# Table Information
+tables:
+  app_usage_events:
+    description: "Main table storing all app usage events"
+    columns:
+      - id: "BIGINT AUTO_INCREMENT PRIMARY KEY"
+      - event_id: "INT NULL - Original HA event_id for reference"
+      - event_name: "VARCHAR(255) NOT NULL - Event type (app_opened, auth_success, etc.)"
+      - app_name: "VARCHAR(255) NOT NULL - App identifier"
+      - org: "VARCHAR(255) NULL - Organization code"
+      - timestamp: "DATETIME NOT NULL - Event timestamp"
+      - event_data: "JSON NOT NULL - Full event payload as JSON"
+      - created_at: "TIMESTAMP - Record creation time"
+      - updated_at: "TIMESTAMP - Record update time"
+
+# Views
+views:
+  recent_events_by_app:
+    description: "View showing recent events per app (last 15)"
+  
+  app_statistics:
+    description: "View with aggregate statistics per app"
+    columns:
+      - app_name: "App identifier"
+      - total_events: "Total count of events"
+      - events_last_24h: "Events in last 24 hours"
+      - total_opens: "Total app opens (event_name = 'app_opened')"
+
+# Testing Queries
+test_queries:
+  # Check if table exists and has data
+  check_table: "SELECT COUNT(*) as event_count FROM app_usage_events;"
+  
+  # Get recent events
+  recent_events: "SELECT * FROM app_usage_events ORDER BY timestamp DESC LIMIT 10;"
+  
+  # Get statistics
+  statistics: "SELECT * FROM app_statistics;"
+  
+  # Get events by app
+  by_app: "SELECT * FROM app_usage_events WHERE app_name = 'lpn-unlock-app' ORDER BY timestamp DESC LIMIT 10;"
