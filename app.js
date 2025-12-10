@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.3.4';
+const DASHBOARD_VERSION = '0.3.5';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -197,14 +197,19 @@ async function loadOverallSummary() {
   if (totalOpens) {
     document.getElementById('total-opens').textContent = totalOpens.state || '0';
   }
-  // Parse events from state (JSON string)
+  // Parse events from attributes.events (JSON string) - state is "unknown" due to 255 char limit
   let events = [];
-  if (recentEvents?.state && recentEvents.state !== 'unknown' && recentEvents.state !== '') {
-    try {
-      events = JSON.parse(recentEvents.state);
-    } catch (e) {
-      console.error('Failed to parse events JSON:', e);
-      events = [];
+  if (recentEvents?.attributes?.events) {
+    const eventsData = recentEvents.attributes.events;
+    if (typeof eventsData === 'string') {
+      try {
+        events = JSON.parse(eventsData);
+      } catch (e) {
+        console.error('Failed to parse events JSON:', e);
+        events = [];
+      }
+    } else if (Array.isArray(eventsData)) {
+      events = eventsData;
     }
   }
   if (!Array.isArray(events)) {
@@ -223,14 +228,19 @@ async function loadAppData() {
       fetchSensorData(`sensor.${app.id}_recent_events`)
     ]);
 
-    // Parse events from state (JSON string)
+    // Parse events from attributes.events (JSON string) - state is "unknown" due to 255 char limit
     let events = [];
-    if (recentEvents?.state && recentEvents.state !== 'unknown' && recentEvents.state !== '') {
-      try {
-        events = JSON.parse(recentEvents.state);
-      } catch (e) {
-        console.error(`Failed to parse events JSON for ${app.id}:`, e);
-        events = [];
+    if (recentEvents?.attributes?.events) {
+      const eventsData = recentEvents.attributes.events;
+      if (typeof eventsData === 'string') {
+        try {
+          events = JSON.parse(eventsData);
+        } catch (e) {
+          console.error(`Failed to parse events JSON for ${app.id}:`, e);
+          events = [];
+        }
+      } else if (Array.isArray(eventsData)) {
+        events = eventsData;
       }
     }
     if (!Array.isArray(events)) {
