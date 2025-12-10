@@ -1,0 +1,739 @@
+# Manhattan App Usage Dashboard - SQL Sensors
+# All SQL sensors for querying app usage events from HA database
+
+#########################################################
+# LPN UNLOCK APP
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: LPN Unlock App - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'lpn-unlock-app';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: LPN Unlock App - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'lpn-unlock-app'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: LPN Unlock App - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'lpn-unlock-app'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: LPN Unlock App - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'lpn-unlock-app'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# MHE CONSOLE
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: MHE Console - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'mhe-console';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: MHE Console - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'mhe-console'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: MHE Console - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'mhe-console'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: MHE Console - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'mhe-console'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# APPT APP (appt_app variant)
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Appt App - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'appt_app' OR json_extract(shared_data, '$.app_name') = 'appt-app';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Appt App - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE (json_extract(shared_data, '$.app_name') = 'appt_app' OR json_extract(shared_data, '$.app_name') = 'appt-app')
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Appt App - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE (json_extract(shared_data, '$.app_name') = 'appt_app' OR json_extract(shared_data, '$.app_name') = 'appt-app')
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Appt App - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'appt_app' OR json_extract(shared_data, '$.app_name') = 'appt-app'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# POS ITEMS
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: POS Items - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'POS Items';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: POS Items - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'POS Items'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: POS Items - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'POS Items'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: POS Items - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'POS Items'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# DRIVER PICKUP
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Driver Pickup - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'driver-pickup' OR json_extract(shared_data, '$.app_name') = 'driver_pickup' OR json_extract(shared_data, '$.app_name') = 'Driver Pickup';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Driver Pickup - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE (json_extract(shared_data, '$.app_name') = 'driver-pickup' OR json_extract(shared_data, '$.app_name') = 'driver_pickup' OR json_extract(shared_data, '$.app_name') = 'Driver Pickup')
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Driver Pickup - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE (json_extract(shared_data, '$.app_name') = 'driver-pickup' OR json_extract(shared_data, '$.app_name') = 'driver_pickup' OR json_extract(shared_data, '$.app_name') = 'Driver Pickup')
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Driver Pickup - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'driver-pickup' OR json_extract(shared_data, '$.app_name') = 'driver_pickup' OR json_extract(shared_data, '$.app_name') = 'Driver Pickup'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# FACILITY ADDRESSES
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Facility Addresses - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'facility-addresses' OR json_extract(shared_data, '$.app_name') = 'facility_addresses' OR json_extract(shared_data, '$.app_name') = 'Facility Addresses';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Facility Addresses - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE (json_extract(shared_data, '$.app_name') = 'facility-addresses' OR json_extract(shared_data, '$.app_name') = 'facility_addresses' OR json_extract(shared_data, '$.app_name') = 'Facility Addresses')
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Facility Addresses - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE (json_extract(shared_data, '$.app_name') = 'facility-addresses' OR json_extract(shared_data, '$.app_name') = 'facility_addresses' OR json_extract(shared_data, '$.app_name') = 'Facility Addresses')
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Facility Addresses - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'facility-addresses' OR json_extract(shared_data, '$.app_name') = 'facility_addresses' OR json_extract(shared_data, '$.app_name') = 'Facility Addresses'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# FORECAST IMPORT (Import Forecast)
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Forecast Import - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Import Forecast';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Forecast Import - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Import Forecast'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Forecast Import - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Import Forecast'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Forecast Import - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'Import Forecast'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# APPS HOMEPAGE
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Apps Homepage - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'apps-homepage';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Apps Homepage - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'apps-homepage'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Apps Homepage - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'apps-homepage'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Apps Homepage - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'apps-homepage'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# ITEM GENERATOR GALLERY
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Item Generator Gallery - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Item Generator';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Item Generator Gallery - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Item Generator'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Item Generator Gallery - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Item Generator'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Item Generator Gallery - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'Item Generator'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# ORDER GENERATOR
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Order Generator - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Order Generator';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Order Generator - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Order Generator'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Order Generator - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'Order Generator'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Order Generator - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'Order Generator'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# SCHEDULE APP
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Schedule App - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'schedule-app';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Schedule App - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'schedule-app'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Schedule App - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'schedule-app'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Schedule App - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'schedule-app'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# TODOLIST
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Todolist - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'todolist';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Todolist - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'todolist'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Todolist - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'todolist'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Todolist - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'todolist'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+
+#########################################################
+# UPDATE APPT
+#########################################################
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Update Appt - Total Events
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'update-appt';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Update Appt - Events Last 24h
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'update-appt'
+      AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Update Appt - Total Opens
+  query: >
+    SELECT COUNT(*) AS count
+    FROM event_data
+    WHERE json_extract(shared_data, '$.app_name') = 'update-appt'
+      AND json_extract(shared_data, '$.event_name') = 'app_opened';
+  column: count
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: Update Appt - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      WHERE json_extract(shared_data, '$.app_name') = 'update-appt'
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events
+
+- db_url: sqlite:////config/home-assistant_v2.db
+  name: All Apps - Recent Events
+  query: >
+    SELECT json_group_array(
+             json_object(
+               'event_name', event_name,
+               'timestamp',  timestamp,
+               'org',        org,
+               'app_name',   app_name
+             )
+           ) AS events
+    FROM (
+      SELECT
+        json_extract(shared_data, '$.event_name') AS event_name,
+        json_extract(shared_data, '$.timestamp') AS timestamp,
+        json_extract(shared_data, '$.org') AS org,
+        json_extract(shared_data, '$.app_name') AS app_name
+      FROM event_data
+      ORDER BY timestamp DESC
+      LIMIT 15
+    );
+  column: events

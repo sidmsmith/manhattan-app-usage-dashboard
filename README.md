@@ -93,6 +93,24 @@ const CONFIG = {
 };
 ```
 
+## Home Assistant Configuration
+
+All Home Assistant configuration files are stored in the `manhattan_dashboard/` folder:
+
+- **`templates.yaml`** - Template sensors for aggregated totals
+- **`sql_sensors.yaml`** - SQL sensors for querying app usage events
+- **`store_event.py`** - Python script for processing webhook events
+- **`README.md`** - Detailed HA configuration documentation
+
+These files should be copied to `/config/manhattan_dashboard/` in your Home Assistant instance. See `manhattan_dashboard/README.md` for setup instructions.
+
+## Version History
+
+- **v1.0.0** (Current) - Baseline version with organized HA configuration
+  - All HA config files moved to `manhattan_dashboard/` folder
+  - Cleaned up unused scripts and test files
+  - Repository cleanup and organization
+
 ## Browser Support
 
 - Modern browsers (Chrome, Firefox, Safari, Edge)

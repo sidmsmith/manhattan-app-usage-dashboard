@@ -1,0 +1,36 @@
+# Manhattan App Usage Dashboard - Template Sensors
+# Aggregated totals across all apps
+
+- sensor:
+    - name: "All Apps - Total Events"
+      state: >
+        {{ states('sensor.lpn_unlock_app_total_events') | int(0) +
+           states('sensor.mhe_console_total_events') | int(0) +
+           states('sensor.appt_app_total_events') | int(0) +
+           states('sensor.pos_items_total_events') | int(0) +
+           states('sensor.driver_pickup_total_events') | int(0) +
+           states('sensor.facility_addresses_total_events') | int(0) +
+           states('sensor.forecast_import_total_events') | int(0) }}
+      unit_of_measurement: "events"
+      
+    - name: "All Apps - Events Last 24h"
+      state: >
+        {{ states('sensor.lpn_unlock_app_events_last_24h') | int(0) +
+           states('sensor.mhe_console_events_last_24h') | int(0) +
+           states('sensor.appt_app_events_last_24h') | int(0) +
+           states('sensor.pos_items_events_last_24h') | int(0) +
+           states('sensor.driver_pickup_events_last_24h') | int(0) +
+           states('sensor.facility_addresses_events_last_24h') | int(0) +
+           states('sensor.forecast_import_events_last_24h') | int(0) }}
+      unit_of_measurement: "events"
+      
+    - name: "All Apps - Total Opens"
+      state: >
+        {{ states('sensor.lpn_unlock_app_total_opens') | int(0) +
+           states('sensor.mhe_console_total_opens') | int(0) +
+           states('sensor.appt_app_total_opens') | int(0) +
+           states('sensor.pos_items_total_opens') | int(0) +
+           states('sensor.driver_pickup_total_opens') | int(0) +
+           states('sensor.facility_addresses_total_opens') | int(0) +
+           states('sensor.forecast_import_total_opens') | int(0) }}
+      unit_of_measurement: "opens"
