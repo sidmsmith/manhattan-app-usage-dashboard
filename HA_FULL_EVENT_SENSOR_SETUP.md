@@ -235,3 +235,4 @@ After setting this up, the web dashboard will be updated to:
 1. Call the Python script service with the event timestamp
 2. Read the result from `sensor.full_event_data_result`
 3. Display the full event data in the modal
+

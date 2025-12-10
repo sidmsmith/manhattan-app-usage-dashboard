@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '0.3.3';
+const DASHBOARD_VERSION = '0.3.4';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -197,17 +197,20 @@ async function loadOverallSummary() {
   if (totalOpens) {
     document.getElementById('total-opens').textContent = totalOpens.state || '0';
   }
-  // Parse events from attributes
-  let events = recentEvents?.attributes?.events || [];
-  if (typeof events === 'string') {
+  // Parse events from state (JSON string)
+  let events = [];
+  if (recentEvents?.state && recentEvents.state !== 'unknown' && recentEvents.state !== '') {
     try {
-      events = JSON.parse(events);
+      events = JSON.parse(recentEvents.state);
     } catch (e) {
       console.error('Failed to parse events JSON:', e);
       events = [];
     }
   }
-  renderRecentEvents(Array.isArray(events) ? events : []);
+  if (!Array.isArray(events)) {
+    events = [];
+  }
+  renderRecentEvents(events);
 }
 
 // Load data for all apps
