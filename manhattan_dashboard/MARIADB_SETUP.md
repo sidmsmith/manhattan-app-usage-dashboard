@@ -248,3 +248,4 @@ If you encounter issues:
 2. Verify connection details are correct
 3. Test connection from command line first
 4. Review error messages for specific issues
+

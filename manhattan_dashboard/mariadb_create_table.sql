@@ -1,26 +1,11 @@
--- MariaDB Setup Script for Manhattan App Usage Dashboard
--- Run this script after installing MariaDB add-on in Home Assistant
+-- MariaDB Table Creation Script for Manhattan App Usage Dashboard
+-- This script creates the table structure only
+-- Note: Database and users are already created by the MariaDB add-on
 -- 
--- Connection: Use MariaDB add-on's built-in database tool or SSH into HA and run:
--- mysql -u root -p < mariadb_setup.sql
+-- Run this from HA Advanced Terminal:
+-- mariadb -h localhost -u root -p manhattan_app_usage < mariadb_create_table.sql
 
--- Create database
-CREATE DATABASE IF NOT EXISTS manhattan_app_usage 
-    CHARACTER SET utf8mb4 
-    COLLATE utf8mb4_unicode_ci;
-
--- Use the database
 USE manhattan_app_usage;
-
--- Create user for dashboard access
--- Note: Replace 'your_secure_password' with a strong password
-CREATE USER IF NOT EXISTS 'dashboard_user'@'%' IDENTIFIED BY 'your_secure_password';
-
--- Grant permissions (read and write)
-GRANT SELECT, INSERT, UPDATE, DELETE ON manhattan_app_usage.* TO 'dashboard_user'@'%';
-
--- Flush privileges to apply changes
-FLUSH PRIVILEGES;
 
 -- Create the app_usage_events table
 CREATE TABLE IF NOT EXISTS app_usage_events (
@@ -80,8 +65,8 @@ FROM app_usage_events
 GROUP BY app_name;
 
 -- Verify setup
-SELECT 'Database setup complete!' AS status;
+SELECT 'Table setup complete!' AS status;
 SELECT COUNT(*) AS table_count FROM information_schema.tables 
     WHERE table_schema = 'manhattan_app_usage';
-SELECT 'dashboard_user' AS user, 'manhattan_app_usage' AS database;
+DESCRIBE app_usage_events;
 

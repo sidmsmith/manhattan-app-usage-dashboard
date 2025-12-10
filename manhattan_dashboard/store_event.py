@@ -77,3 +77,4 @@ try:
 except Exception as e:
     # Log error but don't fail - existing HA event storage must continue working
     logger.warning("MariaDB write error (non-critical, HA event still stored): " + str(e))
+

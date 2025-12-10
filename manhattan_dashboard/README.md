@@ -669,3 +669,4 @@ For issues or questions:
 2. Check configuration: **Developer Tools** > **YAML** > **Check Configuration**
 3. Verify sensors: **Developer Tools** > **States**
 4. Test services: **Developer Tools** > **Services**
+

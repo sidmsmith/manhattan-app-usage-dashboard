@@ -83,3 +83,4 @@ class CustomEventLogger(hass.Hass):
                 cursor.close()
             if cnx:
                 cnx.close()
+

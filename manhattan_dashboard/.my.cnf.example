@@ -1,0 +1,14 @@
+# MariaDB Configuration File Example
+# Copy this to /config/.my.cnf and update with your actual password
+# DO NOT commit the actual .my.cnf file to git (it contains passwords)
+
+[client]
+host=core-mariadb
+user=homeassistant
+password=your_password_here
+database=manhattan_app_usage
+ssl=0
+
+# Alternative: Store in manhattan_dashboard folder and use --defaults-file
+# mariadb --defaults-file=/config/manhattan_dashboard/.my.cnf ...
+

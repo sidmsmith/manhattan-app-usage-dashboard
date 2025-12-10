@@ -77,3 +77,4 @@ test_queries:
   
   # Get events by app
   by_app: "SELECT * FROM app_usage_events WHERE app_name = 'lpn-unlock-app' ORDER BY timestamp DESC LIMIT 10;"
+

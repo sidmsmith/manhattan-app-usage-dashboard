@@ -4,3 +4,4 @@
 custom_event_logger:
   module: custom_event_logger
   class: CustomEventLogger
+
