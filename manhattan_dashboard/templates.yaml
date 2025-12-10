@@ -34,3 +34,4 @@
            states('sensor.facility_addresses_total_opens') | int(0) +
            states('sensor.forecast_import_total_opens') | int(0) }}
       unit_of_measurement: "opens"
+
