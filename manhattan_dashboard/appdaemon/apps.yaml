@@ -1,7 +1,0 @@
-# AppDaemon Apps Configuration
-# This file tells AppDaemon which apps to load
-
-custom_event_logger:
-  module: custom_event_logger
-  class: CustomEventLogger
-

@@ -1,0 +1,15 @@
+appdaemon:
+  time_zone: America/New_York
+  latitude: 33.9944
+  longitude: -84.4747
+  elevation: 300
+  app_dir: /config/apps
+
+plugins:
+  HASS:
+    type: hass
+
+http:
+  url: http://0.0.0.0:5050
+
+hadashboard:
