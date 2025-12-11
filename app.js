@@ -8,6 +8,7 @@ const CONFIG = {
   haUrl: window.CONFIG?.HA_URL || '',
   haToken: window.CONFIG?.HA_TOKEN || '',
   refreshInterval: 60000, // 60 seconds
+  useMariaDB: window.CONFIG?.USE_MARIADB !== false, // Default to true if not specified
 };
 
 // Load config from external file if it exists (for local development)
@@ -128,6 +129,29 @@ function setupEventListeners() {
   }
 }
 
+// Fetch data from MariaDB via direct connection (Cloudflare Tunnel)
+// The serverless function connects directly to MariaDB, bypassing AppDaemon
+async function fetchMariaDBData(query, params = {}) {
+  if (!CONFIG.useMariaDB) {
+    return null;
+  }
+
+  try {
+    const queryParams = new URLSearchParams({ query, ...params });
+    const url = `/api/fetch-mariadb?${queryParams.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.warn(`[fetchMariaDBData] Failed to fetch from MariaDB (${query}):`, error.message);
+    return null; // Return null on error, allowing fallback to SQL sensors
+  }
+}
+
 // Fetch data from Home Assistant API
 async function fetchSensorData(entityId) {
   try {
@@ -180,11 +204,15 @@ async function loadDashboardData() {
 
 // Load overall summary data
 async function loadOverallSummary() {
-  const [totalEvents, events24h, totalOpens, recentEvents] = await Promise.all([
+  // Phase 1: Hybrid approach
+  // - Use SQL sensors for summary stats
+  // - Try MariaDB first for recent events (full JSON), fallback to SQL sensor
+  
+  // Fetch summary stats from SQL sensors (always use these for now)
+  const [totalEvents, events24h, totalOpens] = await Promise.all([
     fetchSensorData('sensor.all_apps_total_events'),
     fetchSensorData('sensor.all_apps_events_last_24h'),
-    fetchSensorData('sensor.all_apps_total_opens'),
-    fetchSensorData('sensor.all_apps_recent_events')
+    fetchSensorData('sensor.all_apps_total_opens')
   ]);
 
   if (totalEvents) {
@@ -196,21 +224,43 @@ async function loadOverallSummary() {
   if (totalOpens) {
     document.getElementById('total-opens').textContent = totalOpens.state || '0';
   }
-  // Parse events from attributes.events (JSON string) - state is "unknown" due to 255 char limit
+
+  // Try MariaDB for recent events (all apps, full JSON), fallback to SQL sensor
   let events = [];
-  if (recentEvents?.attributes?.events) {
-    const eventsData = recentEvents.attributes.events;
-    if (typeof eventsData === 'string') {
-      try {
-        events = JSON.parse(eventsData);
-      } catch (e) {
-        console.error('Failed to parse events JSON:', e);
-        events = [];
+  const mariadbData = await fetchMariaDBData('recent-events', { limit: '15' });
+  
+  if (mariadbData && mariadbData.events && Array.isArray(mariadbData.events)) {
+    // Use MariaDB data - convert to expected format
+    events = mariadbData.events.map(event => ({
+      event_name: event.event_name,
+      timestamp: event.timestamp,
+      org: event.org,
+      app_name: event.app_name,
+      id: event.id, // MariaDB ID
+      event_data: event.event_data // Full JSON data available!
+    }));
+    console.log('[loadOverallSummary] Using MariaDB data for recent events:', events.length);
+  } else {
+    // Fallback to SQL sensor
+    const recentEvents = await fetchSensorData('sensor.all_apps_recent_events');
+    
+    // Parse events from attributes.events (JSON string) - state is "unknown" due to 255 char limit
+    if (recentEvents?.attributes?.events) {
+      const eventsData = recentEvents.attributes.events;
+      if (typeof eventsData === 'string') {
+        try {
+          events = JSON.parse(eventsData);
+        } catch (e) {
+          console.error('Failed to parse events JSON:', e);
+          events = [];
+        }
+      } else if (Array.isArray(eventsData)) {
+        events = eventsData;
       }
-    } else if (Array.isArray(eventsData)) {
-      events = eventsData;
     }
+    console.log('[loadOverallSummary] Using SQL sensor data for recent events:', events.length);
   }
+  
   if (!Array.isArray(events)) {
     events = [];
   }
@@ -220,28 +270,59 @@ async function loadOverallSummary() {
 // Load data for all apps
 async function loadAppData() {
   const promises = APPS.map(async (app) => {
-    const [totalEvents, events24h, totalOpens, recentEvents] = await Promise.all([
+    // Phase 1: Hybrid approach
+    // - Use SQL sensors for summary stats (totalEvents, events24h, totalOpens)
+    // - Try MariaDB first for recent events (full JSON data), fallback to SQL sensors
+    
+    // Convert app.id to app_name format (e.g., 'mhe_console' -> 'mhe-console')
+    const appName = app.id.replace(/_/g, '-');
+    
+    // Fetch summary stats from SQL sensors (always use these for now)
+    const [totalEvents, events24h, totalOpens] = await Promise.all([
       fetchSensorData(`sensor.${app.id}_total_events`),
       fetchSensorData(`sensor.${app.id}_events_last_24h`),
-      fetchSensorData(`sensor.${app.id}_total_opens`),
-      fetchSensorData(`sensor.${app.id}_recent_events`)
+      fetchSensorData(`sensor.${app.id}_total_opens`)
     ]);
 
-    // Parse events from attributes.events (JSON string) - state is "unknown" due to 255 char limit
+    // Try MariaDB for recent events (full JSON), fallback to SQL sensor
     let events = [];
-    if (recentEvents?.attributes?.events) {
-      const eventsData = recentEvents.attributes.events;
-      if (typeof eventsData === 'string') {
-        try {
-          events = JSON.parse(eventsData);
-        } catch (e) {
-          console.error(`Failed to parse events JSON for ${app.id}:`, e);
-          events = [];
+    const mariadbData = await fetchMariaDBData('recent-events', { 
+      app_name: appName, 
+      limit: '15' 
+    });
+    
+    if (mariadbData && mariadbData.events && Array.isArray(mariadbData.events)) {
+      // Use MariaDB data - convert to expected format
+      events = mariadbData.events.map(event => ({
+        event_name: event.event_name,
+        timestamp: event.timestamp,
+        org: event.org,
+        app_name: event.app_name,
+        id: event.id, // MariaDB ID
+        event_data: event.event_data // Full JSON data available!
+      }));
+      console.log(`[loadAppData] Using MariaDB data for ${app.id}: ${events.length} events`);
+    } else {
+      // Fallback to SQL sensor
+      const recentEvents = await fetchSensorData(`sensor.${app.id}_recent_events`);
+      
+      // Parse events from attributes.events (JSON string) - state is "unknown" due to 255 char limit
+      if (recentEvents?.attributes?.events) {
+        const eventsData = recentEvents.attributes.events;
+        if (typeof eventsData === 'string') {
+          try {
+            events = JSON.parse(eventsData);
+          } catch (e) {
+            console.error(`Failed to parse events JSON for ${app.id}:`, e);
+            events = [];
+          }
+        } else if (Array.isArray(eventsData)) {
+          events = eventsData;
         }
-      } else if (Array.isArray(eventsData)) {
-        events = eventsData;
       }
+      console.log(`[loadAppData] Using SQL sensor data for ${app.id}: ${events.length} events`);
     }
+    
     if (!Array.isArray(events)) {
       events = [];
     }

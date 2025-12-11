@@ -8,38 +8,51 @@ This dashboard provides real-time visibility into app usage metrics across multi
 
 **Repository**: https://github.com/sidmsmith/manhattan-app-usage-dashboard.git  
 **Deployment**: Vercel (serverless functions)  
-**Data Source**: Home Assistant API
+**Data Sources**: 
+- Home Assistant API (SQL sensors from SQLite)
+- MariaDB (direct connection via Cloudflare Tunnel) - **Phase 1: Hybrid approach**
 
 ## Architecture
 
+### Current Architecture (Phase 1: Hybrid Approach)
+
 ```
 ┌─────────────────┐
-│  Manhattan Apps │
-│  (Python/JS)    │
-└────────┬────────┘
+│  Manhattan Apps  │
+│  (Python/JS)     │
+└────────┬─────────┘
          │ POST /api/webhook/manhattan_app_usage
          ▼
-┌─────────────────┐
-│ Home Assistant  │
-│  - Automation   │
-│  - Python Script│
-│  - SQL Sensors  │
-│  - Template     │
-│    Sensors      │
-└────────┬────────┘
-         │ GET /api/states/{entity_id}
-         ▼
-┌─────────────────┐
-│  Vercel Server  │
-│  (fetch-sensor)  │
-└────────┬────────┘
+┌─────────────────────────────────────┐
+│      Home Assistant                 │
+│  ┌───────────────────────────────┐ │
+│  │ Automation → Python Script    │ │
+│  │   ↓                            │ │
+│  │ HA Event Bus                   │ │
+│  │   ├─→ SQLite (default)        │ │
+│  │   │   └─→ SQL Sensors         │ │
+│  │   └─→ AppDaemon               │ │
+│  │       └─→ MariaDB              │ │
+│  └───────────────────────────────┘ │
+└────────┬───────────────────────────┘
          │
-         ▼
-┌─────────────────┐
-│  Web Dashboard   │
-│  (HTML/CSS/JS)   │
-└─────────────────┘
+         ├─→ GET /api/states/{entity_id} (SQL Sensors)
+         │   └─→ Vercel: /api/fetch-sensor.js
+         │
+         └─→ GET :5051/query/* (MariaDB via AppDaemon)
+             └─→ Vercel: /api/fetch-mariadb.js
+                 └─→ Dashboard (uses MariaDB for full event data)
 ```
+
+**Phase 1 (Current):**
+- **SQL Sensors** (SQLite): Used for summary statistics (total events, 24h events, total opens)
+- **MariaDB** (via AppDaemon): Used for recent events with full JSON data (no 255-char limit)
+- **Fallback**: If MariaDB query fails, dashboard falls back to SQL sensors
+
+**Future (Phase 2):**
+- Full migration to MariaDB for all queries
+- SQL sensors removed
+- SQLite kept as backup only
 
 ## Features
 
@@ -93,6 +106,25 @@ This dashboard provides real-time visibility into app usage metrics across multi
 - [ ] Create automation for webhook `manhattan_app_usage`
 - [ ] Restart Home Assistant
 - [ ] Verify sensors are created (check Developer Tools > States)
+
+### Step 1.5: MariaDB Integration (Phase 1 - Optional but Recommended)
+
+**For full event data access (no 255-char limit):**
+
+1. **Install MariaDB Add-on** in Home Assistant
+2. **Create database and table** (see [`manhattan_dashboard/mariadb_create_table.sql`](./manhattan_dashboard/mariadb_create_table.sql))
+3. **Install AppDaemon Add-on** in Home Assistant (for writing events only)
+4. **Configure AppDaemon** (see [`manhattan_dashboard/appdaemon/README.md`](./manhattan_dashboard/appdaemon/README.md))
+5. **Set up Cloudflare Tunnel** (see [`CLOUDFLARE_TUNNEL_SETUP.md`](./CLOUDFLARE_TUNNEL_SETUP.md))
+6. **Create MariaDB read-only user** (see [`MARIADB_USER_SETUP.md`](./MARIADB_USER_SETUP.md))
+
+**Benefits:**
+- Full event JSON data (no truncation)
+- Direct SQL queries (full power, no REST API limitations)
+- Better performance (no AppDaemon HTTP layer)
+- Simpler architecture (AppDaemon only for writing events)
+
+**Note:** The dashboard will work without MariaDB, but will use SQL sensors with limited data. MariaDB integration is optional for Phase 1.
 
 ### Step 2: Home Assistant Connectivity
 
