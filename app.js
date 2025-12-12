@@ -486,10 +486,26 @@ function createEventItem(event) {
   // Header card format: App (bold) || Event
   div.innerHTML = `• <strong>${appShort}</strong> — ${eventName} — ${mmdd} ${time} — ${org}`;
   
-  // Add click handler for modal
-  div.addEventListener('click', () => openEventModal(event.id, 'summary', event.app_name));
+  // Add click handler for modal (only if event.id exists)
+  if (event.id) {
+    div.addEventListener('click', () => openEventModal(event.id, 'summary', event.app_name));
+  }
   
   return div;
+}
+
+// Get human-readable app display name (for modal header)
+function getAppDisplayName(appName) {
+  if (!appName) return 'Unknown App';
+  
+  // Find matching app from APPS array
+  const app = APPS.find(a => 
+    a.neonAppName === appName || 
+    a.id.replace(/_/g, '-') === appName ||
+    a.name === appName
+  );
+  
+  return app ? app.name : appName;
 }
 
 // Get short app name
@@ -689,8 +705,10 @@ function createAppEventItem(event) {
 
   div.innerHTML = `• <strong>${eventName}</strong> — ${mmdd} ${time} — ${org}`;
   
-  // Add click handler for modal
-  div.addEventListener('click', () => openEventModal(event.id, 'app', event.app_name));
+  // Add click handler for modal (only if event.id exists)
+  if (event.id) {
+    div.addEventListener('click', () => openEventModal(event.id, 'app', event.app_name));
+  }
   
   return div;
 }
@@ -950,6 +968,11 @@ async function navigateToNext() {
   modalState.currentId = modalState.nextId;
   const oldPrevId = modalState.prevId;
   modalState.prevId = modalState.currentId; // Current becomes prev
+  
+  // Update modal header with app name
+  const modalHeader = document.querySelector('.modal-header h2');
+  const appDisplayName = getAppDisplayName(eventData.app_name);
+  modalHeader.textContent = `Event Details: ${appDisplayName}`;
   
   // Display event
   displayEventInModal(eventData);
