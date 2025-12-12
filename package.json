@@ -1,6 +1,6 @@
 {
   "name": "manhattan-app-usage-dashboard",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Manhattan App Usage Dashboard",
   "type": "module",
   "scripts": {

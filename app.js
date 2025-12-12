@@ -962,8 +962,9 @@ async function navigateToPrev() {
   // Display event
   displayEventInModal(eventData);
   
-  // Pre-load new previous event
-  const newPrevId = await fetchNavigationId(modalState.currentId, 'prev', modalState.appName);
+  // Pre-load new previous event (use context to determine if app-specific)
+  const appNameForNav = modalState.context === 'app' ? modalState.appName : null;
+  const newPrevId = await fetchNavigationId(modalState.currentId, 'prev', appNameForNav);
   modalState.prevId = newPrevId;
   
   // Pre-load new previous event data
