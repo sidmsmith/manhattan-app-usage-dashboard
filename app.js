@@ -132,9 +132,19 @@ function setupEventListeners() {
 
 // Fetch data from Neon PostgreSQL (cloud database)
 // The serverless function connects directly to Neon PostgreSQL
+// Uses client-side caching (30 second TTL) to reduce API calls
 async function fetchNeonData(query, params = {}) {
   if (!CONFIG.useNeon) {
     return null;
+  }
+
+  // Create cache key from query and params
+  const cacheKey = `neon:${query}:${JSON.stringify(params)}`;
+  
+  // Check cache first
+  const cached = apiCache.get(cacheKey);
+  if (cached !== null) {
+    return cached;
   }
 
   try {
@@ -146,9 +156,14 @@ async function fetchNeonData(query, params = {}) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    
+    // Store in cache
+    apiCache.set(cacheKey, data);
+    
+    return data;
   } catch (error) {
-    console.warn(`[fetchNeonData] Failed to fetch from Neon (${query}):`, error.message);
+    // Neon fetch failed, falling back to SQL sensors (error logged silently)
     return null; // Return null on error, allowing fallback to SQL sensors
   }
 }
@@ -259,7 +274,7 @@ async function loadOverallSummary() {
         events = eventsData;
       }
     }
-    console.log('[loadOverallSummary] Using SQL sensor data for recent events:', events.length, '(Neon unavailable)');
+    // Using SQL sensor data (Neon unavailable - fallback mode)
   }
   
   if (!Array.isArray(events)) {
@@ -302,7 +317,7 @@ async function loadAppData() {
         id: event.id, // Neon ID
         event_data: event.event_data // Full JSON data available!
       }));
-      console.log(`[loadAppData] Using Neon data for ${app.id}: ${events.length} events`);
+      // Using Neon data for recent events (verbose logging removed)
     } else {
       // Fallback to SQL sensor
       const recentEvents = await fetchSensorData(`sensor.${app.id}_recent_events`);
