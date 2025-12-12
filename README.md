@@ -258,8 +258,8 @@ The version is displayed in the dashboard title and badge. Update in two places:
 const DASHBOARD_VERSION = '1.0.0';
 
 // In index.html
-<title>Manhattan App Usage Dashboard v1.0.0</title>
-<h2>📊 Overall Summary <span class="version-badge">v1.0.0</span></h2>
+<title>Manhattan App Usage Dashboard v2.0.0</title>
+<h2>📊 Overall Summary <span class="version-badge">v2.0.0</span></h2>
 ```
 
 ## Home Assistant Configuration
