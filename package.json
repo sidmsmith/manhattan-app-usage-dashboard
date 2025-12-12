@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "python -m http.server 8000",
-    "update-neon-schema": "node scripts/update-neon-schema.js"
+    "update-neon-schema": "node scripts/update-neon-schema.js",
+    "fix-neon-timestamps": "node scripts/fix-neon-timestamps.js"
   },
   "dependencies": {
     "pg": "^8.11.3"
