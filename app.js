@@ -58,7 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeSortable();
   setupEventListeners();
   loadDashboardData();
-  setInterval(loadDashboardData, CONFIG.refreshInterval);
+  // Auto-refresh every 60 seconds (cache will be used if still valid)
+  setInterval(() => loadDashboardData(false), CONFIG.refreshInterval);
 });
 
 // Update version display in header
