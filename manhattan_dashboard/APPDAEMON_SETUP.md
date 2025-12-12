@@ -226,3 +226,4 @@ Once AppDaemon is working:
 3. Consider moving SQL sensors to query MariaDB instead of SQLite
 4. Set up proper password management (secrets.yaml or environment variables)
 
+

@@ -1,3 +1,9 @@
+// OBSOLETE: This file is being replaced with fetch-neon.js
+// This was used for direct MariaDB connection via Cloudflare Tunnel
+// The dashboard now uses Neon PostgreSQL instead
+//
+// TODO: Remove this file after fetch-neon.js is implemented
+
 // Vercel serverless function to fetch data directly from MariaDB via Cloudflare Tunnel
 // This connects directly to MariaDB without AppDaemon, providing full SQL query capabilities
 

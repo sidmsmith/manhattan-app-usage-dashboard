@@ -8,7 +8,7 @@ const CONFIG = {
   haUrl: window.CONFIG?.HA_URL || '',
   haToken: window.CONFIG?.HA_TOKEN || '',
   refreshInterval: 60000, // 60 seconds
-  useMariaDB: window.CONFIG?.USE_MARIADB !== false, // Default to true if not specified
+  useNeon: window.CONFIG?.USE_NEON !== false, // Default to true if not specified
 };
 
 // Load config from external file if it exists (for local development)
@@ -129,16 +129,16 @@ function setupEventListeners() {
   }
 }
 
-// Fetch data from MariaDB via direct connection (Cloudflare Tunnel)
-// The serverless function connects directly to MariaDB, bypassing AppDaemon
-async function fetchMariaDBData(query, params = {}) {
-  if (!CONFIG.useMariaDB) {
+// Fetch data from Neon PostgreSQL (cloud database)
+// The serverless function connects directly to Neon PostgreSQL
+async function fetchNeonData(query, params = {}) {
+  if (!CONFIG.useNeon) {
     return null;
   }
 
   try {
     const queryParams = new URLSearchParams({ query, ...params });
-    const url = `/api/fetch-mariadb?${queryParams.toString()}`;
+    const url = `/api/fetch-neon?${queryParams.toString()}`;
     
     const response = await fetch(url);
     if (!response.ok) {
@@ -147,7 +147,7 @@ async function fetchMariaDBData(query, params = {}) {
     
     return await response.json();
   } catch (error) {
-    console.warn(`[fetchMariaDBData] Failed to fetch from MariaDB (${query}):`, error.message);
+    console.warn(`[fetchNeonData] Failed to fetch from Neon (${query}):`, error.message);
     return null; // Return null on error, allowing fallback to SQL sensors
   }
 }
@@ -204,9 +204,9 @@ async function loadDashboardData() {
 
 // Load overall summary data
 async function loadOverallSummary() {
-  // Phase 1: Hybrid approach
+  // Hybrid approach
   // - Use SQL sensors for summary stats
-  // - Try MariaDB first for recent events (full JSON), fallback to SQL sensor
+  // - Try Neon first for recent events (full JSON), fallback to SQL sensor
   
   // Fetch summary stats from SQL sensors (always use these for now)
   const [totalEvents, events24h, totalOpens] = await Promise.all([
@@ -225,22 +225,22 @@ async function loadOverallSummary() {
     document.getElementById('total-opens').textContent = totalOpens.state || '0';
   }
 
-  // Try MariaDB for recent events (all apps, full JSON), fallback to SQL sensor
-  let events = [];
-  const mariadbData = await fetchMariaDBData('recent-events', { limit: '15' });
-  
-  if (mariadbData && mariadbData.events && Array.isArray(mariadbData.events)) {
-    // Use MariaDB data - convert to expected format
-    events = mariadbData.events.map(event => ({
-      event_name: event.event_name,
-      timestamp: event.timestamp,
-      org: event.org,
-      app_name: event.app_name,
-      id: event.id, // MariaDB ID
-      event_data: event.event_data // Full JSON data available!
-    }));
-    console.log('[loadOverallSummary] Using MariaDB data for recent events:', events.length);
-  } else {
+    // Try Neon for recent events (all apps, full JSON), fallback to SQL sensor
+    let events = [];
+    const neonData = await fetchNeonData('recent-events', { limit: '15' });
+    
+    if (neonData && neonData.events && Array.isArray(neonData.events)) {
+      // Use Neon data - convert to expected format
+      events = neonData.events.map(event => ({
+        event_name: event.event_name,
+        timestamp: event.timestamp,
+        org: event.org,
+        app_name: event.app_name,
+        id: event.id, // Neon ID
+        event_data: event.event_data // Full JSON data available!
+      }));
+      console.log('[loadOverallSummary] Using Neon data for recent events:', events.length);
+    } else {
     // Fallback to SQL sensor
     const recentEvents = await fetchSensorData('sensor.all_apps_recent_events');
     
@@ -258,7 +258,7 @@ async function loadOverallSummary() {
         events = eventsData;
       }
     }
-    console.log('[loadOverallSummary] Using SQL sensor data for recent events:', events.length);
+    console.log('[loadOverallSummary] Using SQL sensor data for recent events:', events.length, '(Neon unavailable)');
   }
   
   if (!Array.isArray(events)) {
@@ -270,9 +270,9 @@ async function loadOverallSummary() {
 // Load data for all apps
 async function loadAppData() {
   const promises = APPS.map(async (app) => {
-    // Phase 1: Hybrid approach
-    // - Use SQL sensors for summary stats (totalEvents, events24h, totalOpens)
-    // - Try MariaDB first for recent events (full JSON data), fallback to SQL sensors
+  // Hybrid approach
+  // - Use SQL sensors for summary stats (totalEvents, events24h, totalOpens)
+  // - Try Neon first for recent events (full JSON data), fallback to SQL sensors
     
     // Convert app.id to app_name format (e.g., 'mhe_console' -> 'mhe-console')
     const appName = app.id.replace(/_/g, '-');
@@ -284,24 +284,24 @@ async function loadAppData() {
       fetchSensorData(`sensor.${app.id}_total_opens`)
     ]);
 
-    // Try MariaDB for recent events (full JSON), fallback to SQL sensor
+    // Try Neon for recent events (full JSON), fallback to SQL sensor
     let events = [];
-    const mariadbData = await fetchMariaDBData('recent-events', { 
+    const neonData = await fetchNeonData('recent-events', { 
       app_name: appName, 
       limit: '15' 
     });
     
-    if (mariadbData && mariadbData.events && Array.isArray(mariadbData.events)) {
-      // Use MariaDB data - convert to expected format
-      events = mariadbData.events.map(event => ({
+    if (neonData && neonData.events && Array.isArray(neonData.events)) {
+      // Use Neon data - convert to expected format
+      events = neonData.events.map(event => ({
         event_name: event.event_name,
         timestamp: event.timestamp,
         org: event.org,
         app_name: event.app_name,
-        id: event.id, // MariaDB ID
+        id: event.id, // Neon ID
         event_data: event.event_data // Full JSON data available!
       }));
-      console.log(`[loadAppData] Using MariaDB data for ${app.id}: ${events.length} events`);
+      console.log(`[loadAppData] Using Neon data for ${app.id}: ${events.length} events`);
     } else {
       // Fallback to SQL sensor
       const recentEvents = await fetchSensorData(`sensor.${app.id}_recent_events`);

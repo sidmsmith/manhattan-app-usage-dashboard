@@ -6,6 +6,6 @@
     "dev": "python -m http.server 8000"
   },
   "dependencies": {
-    "mysql2": "^3.6.5"
+    "pg": "^8.11.3"
   }
 }

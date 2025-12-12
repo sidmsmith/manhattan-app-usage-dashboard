@@ -4,12 +4,13 @@ This folder contains all Home Assistant configuration files for the Manhattan Ap
 
 ## Overview
 
-The Home Assistant configuration consists of four main components:
+The Home Assistant configuration consists of five main components:
 
 1. **Automation** - Receives webhook events from apps and triggers the Python script
 2. **Python Script** - Processes webhook data and fires HA events into the database
-3. **SQL Sensors** - Query the HA database to aggregate and format event data
-4. **Template Sensors** - Aggregate totals across all individual app sensors
+3. **AppDaemon** - Listens for events and writes to both MariaDB (local) and Neon PostgreSQL (cloud)
+4. **SQL Sensors** - Query the HA database to aggregate and format event data
+5. **Template Sensors** - Aggregate totals across all individual app sensors
 
 ## Complete Setup Guide
 
@@ -27,7 +28,10 @@ Copy all files from this `manhattan_dashboard/` folder to `/config/manhattan_das
 - `templates.yaml`
 - `sql_sensors.yaml`
 - `store_event.py`
+- `appdaemon/` folder (AppDaemon configuration and logger)
 - `README.md` (this file, for reference)
+
+**Note:** AppDaemon files must be copied to specific HA locations (not just `/config/manhattan_dashboard/`). See [`appdaemon/README.md`](./appdaemon/README.md) for deployment instructions.
 
 ### Step 2: Configure Python Script
 
@@ -669,4 +673,5 @@ For issues or questions:
 2. Check configuration: **Developer Tools** > **YAML** > **Check Configuration**
 3. Verify sensors: **Developer Tools** > **States**
 4. Test services: **Developer Tools** > **Services**
+
 

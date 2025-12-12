@@ -9,12 +9,12 @@ This dashboard provides real-time visibility into app usage metrics across multi
 **Repository**: https://github.com/sidmsmith/manhattan-app-usage-dashboard.git  
 **Deployment**: Vercel (serverless functions)  
 **Data Sources**: 
-- Home Assistant API (SQL sensors from SQLite)
-- MariaDB (direct connection via Cloudflare Tunnel) - **Phase 1: Hybrid approach**
+- Home Assistant API (SQL sensors from SQLite) - Summary statistics
+- Neon PostgreSQL (cloud database) - Full event data for dashboard
 
 ## Architecture
 
-### Current Architecture (Phase 1: Hybrid Approach)
+### Current Architecture (Neon PostgreSQL Integration)
 
 ```
 ┌─────────────────┐
@@ -32,27 +32,26 @@ This dashboard provides real-time visibility into app usage metrics across multi
 │  │   ├─→ SQLite (default)        │ │
 │  │   │   └─→ SQL Sensors         │ │
 │  │   └─→ AppDaemon               │ │
-│  │       └─→ MariaDB              │ │
+│  │       ├─→ MariaDB (local)     │ │
+│  │       └─→ Neon PostgreSQL      │ │
 │  └───────────────────────────────┘ │
 └────────┬───────────────────────────┘
          │
          ├─→ GET /api/states/{entity_id} (SQL Sensors)
          │   └─→ Vercel: /api/fetch-sensor.js
+         │       └─→ Dashboard (summary statistics)
          │
-         └─→ GET :5051/query/* (MariaDB via AppDaemon)
-             └─→ Vercel: /api/fetch-mariadb.js
-                 └─→ Dashboard (uses MariaDB for full event data)
+         └─→ Neon PostgreSQL (cloud)
+             └─→ Vercel: /api/fetch-neon.js (to be created)
+                 └─→ Dashboard (full event data)
 ```
 
-**Phase 1 (Current):**
+**Current Architecture:**
 - **SQL Sensors** (SQLite): Used for summary statistics (total events, 24h events, total opens)
-- **MariaDB** (via AppDaemon): Used for recent events with full JSON data (no 255-char limit)
-- **Fallback**: If MariaDB query fails, dashboard falls back to SQL sensors
-
-**Future (Phase 2):**
-- Full migration to MariaDB for all queries
-- SQL sensors removed
-- SQLite kept as backup only
+- **Neon PostgreSQL** (cloud): Primary database for dashboard - stores all events with full JSON data
+- **MariaDB** (local): Backup/legacy support - AppDaemon writes to both databases independently
+- **AppDaemon**: Listens for `app_usage_event` and writes to both MariaDB and Neon (dual-write)
+- **Fallback**: If Neon query fails, dashboard falls back to SQL sensors
 
 ## Features
 
@@ -107,24 +106,40 @@ This dashboard provides real-time visibility into app usage metrics across multi
 - [ ] Restart Home Assistant
 - [ ] Verify sensors are created (check Developer Tools > States)
 
-### Step 1.5: MariaDB Integration (Phase 1 - Optional but Recommended)
+### Step 1.5: Neon PostgreSQL Integration (Required for Full Event Data)
+
+**See [`VERCEL_ENV_SETUP.md`](./VERCEL_ENV_SETUP.md) for the exact connection string to use in Vercel.**
 
 **For full event data access (no 255-char limit):**
 
-1. **Install MariaDB Add-on** in Home Assistant
-2. **Create database and table** (see [`manhattan_dashboard/mariadb_create_table.sql`](./manhattan_dashboard/mariadb_create_table.sql))
-3. **Install AppDaemon Add-on** in Home Assistant (for writing events only)
-4. **Configure AppDaemon** (see [`manhattan_dashboard/appdaemon/README.md`](./manhattan_dashboard/appdaemon/README.md))
-5. **Set up Cloudflare Tunnel** (see [`CLOUDFLARE_TUNNEL_SETUP.md`](./CLOUDFLARE_TUNNEL_SETUP.md))
-6. **Create MariaDB read-only user** (see [`MARIADB_USER_SETUP.md`](./MARIADB_USER_SETUP.md))
+1. **Create Neon PostgreSQL Database** (cloud-based, free tier available)
+   - Sign up at https://neon.tech
+   - Create a new project
+   - Note your connection string (pooler endpoint recommended)
+
+2. **Create Database Schema** in Neon
+   - Use the same schema as MariaDB (see [`manhattan_dashboard/mariadb_create_table.sql`](./manhattan_dashboard/mariadb_create_table.sql))
+   - Adapt SQL syntax for PostgreSQL (JSON → JSONB, etc.)
+
+3. **Install AppDaemon Add-on** in Home Assistant
+   - Required for writing events to Neon
+   - See [`manhattan_dashboard/appdaemon/README.md`](./manhattan_dashboard/appdaemon/README.md) for setup
+
+4. **Configure AppDaemon** with Neon credentials
+   - Update `custom_event_logger.py` with Neon connection details
+   - Add `psycopg2-binary` to AppDaemon's `python_packages`
+
+5. **Deploy AppDaemon Files** to HA
+   - Copy files from Git structure to HA's required locations
+   - See [`manhattan_dashboard/appdaemon/README.md`](./manhattan_dashboard/appdaemon/README.md) deployment guide
 
 **Benefits:**
 - Full event JSON data (no truncation)
-- Direct SQL queries (full power, no REST API limitations)
-- Better performance (no AppDaemon HTTP layer)
-- Simpler architecture (AppDaemon only for writing events)
+- Cloud-based (accessible from Vercel without tunnels)
+- Better performance for serverless functions
+- Automatic backups and scaling
 
-**Note:** The dashboard will work without MariaDB, but will use SQL sensors with limited data. MariaDB integration is optional for Phase 1.
+**Note:** The dashboard will work without Neon, but will use SQL sensors with limited data. Neon integration is recommended for full functionality.
 
 ### Step 2: Home Assistant Connectivity
 

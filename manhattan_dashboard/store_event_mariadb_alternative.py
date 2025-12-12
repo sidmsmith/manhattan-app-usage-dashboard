@@ -19,3 +19,4 @@ hass.bus.fire("app_usage_event", event)
 # For now, the main store_event.py uses subprocess approach
 # If that fails, we can implement one of these alternatives
 
+

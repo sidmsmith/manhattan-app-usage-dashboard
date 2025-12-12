@@ -12,3 +12,4 @@ ssl=0
 # Alternative: Store in manhattan_dashboard folder and use --defaults-file
 # mariadb --defaults-file=/config/manhattan_dashboard/.my.cnf ...
 
+

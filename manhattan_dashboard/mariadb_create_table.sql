@@ -70,3 +70,4 @@ SELECT COUNT(*) AS table_count FROM information_schema.tables
     WHERE table_schema = 'manhattan_app_usage';
 DESCRIBE app_usage_events;
 
+
