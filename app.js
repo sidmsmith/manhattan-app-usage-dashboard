@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSortOrder();
   initializeSortable();
   setupEventListeners();
+  initializeModal(); // Initialize modal functionality
   loadDashboardData();
   // Auto-refresh every 60 seconds (cache will be used if still valid)
   setInterval(() => loadDashboardData(false), CONFIG.refreshInterval);
@@ -471,6 +472,9 @@ function formatLocalTime(utcTimestamp) {
 function createEventItem(event) {
   const div = document.createElement('div');
   div.className = 'event-item';
+  div.dataset.eventId = event.id;
+  div.dataset.appName = event.app_name || '';
+  div.dataset.context = 'summary'; // Context: summary or app-specific
 
   // Convert UTC to local time
   const { mmdd, time } = formatLocalTime(event.timestamp);
@@ -481,6 +485,10 @@ function createEventItem(event) {
 
   // Header card format: App (bold) || Event
   div.innerHTML = `• <strong>${appShort}</strong> — ${eventName} — ${mmdd} ${time} — ${org}`;
+  
+  // Add click handler for modal
+  div.addEventListener('click', () => openEventModal(event.id, 'summary', event.app_name));
+  
   return div;
 }
 
@@ -657,6 +665,9 @@ function createAppCard(app) {
 function createAppEventItem(event) {
   const div = document.createElement('div');
   div.className = 'app-event-item';
+  div.dataset.eventId = event.id;
+  div.dataset.appName = event.app_name || '';
+  div.dataset.context = 'app'; // Context: app-specific navigation
 
   // Convert UTC to local time
   const { mmdd, time } = formatLocalTime(event.timestamp);
@@ -677,6 +688,10 @@ function createAppEventItem(event) {
   const org = event.org || 'N/A';
 
   div.innerHTML = `• <strong>${eventName}</strong> — ${mmdd} ${time} — ${org}`;
+  
+  // Add click handler for modal
+  div.addEventListener('click', () => openEventModal(event.id, 'app', event.app_name));
+  
   return div;
 }
 
@@ -686,5 +701,328 @@ function showError(message) {
   if (container) {
     container.innerHTML = `<div class="loading-message" style="color: red;">${message}</div>`;
   }
+}
+
+// Modal state management
+let modalState = {
+  currentId: null,
+  context: null, // 'summary' or 'app'
+  appName: null, // For app-specific navigation
+  prevId: null,
+  nextId: null,
+  prevData: null,
+  nextData: null
+};
+
+// Open event modal
+async function openEventModal(eventId, context, appName = null) {
+  const modal = document.getElementById('eventModal');
+  const modalBody = document.getElementById('modalBody');
+  
+  // Set modal state
+  modalState.currentId = eventId;
+  modalState.context = context;
+  modalState.appName = appName;
+  
+  // Show modal with loading state
+  modal.style.display = 'flex';
+  modalBody.innerHTML = '<div class="modal-loading">Loading event details...</div>';
+  
+  // Hide navigation buttons initially
+  document.getElementById('modalPrevBtn').style.display = 'none';
+  document.getElementById('modalNextBtn').style.display = 'none';
+  
+  try {
+    // Fetch current event details
+    const eventData = await fetchEventDetails(eventId);
+    
+    if (eventData.error) {
+      modalBody.innerHTML = `<div class="modal-loading" style="color: red;">Error: ${eventData.error}</div>`;
+      return;
+    }
+    
+    // Display event data
+    displayEventInModal(eventData);
+    
+    // Pre-load previous and next events
+    await preloadNavigationEvents(eventId, context, appName);
+    
+    // Update navigation buttons
+    updateNavigationButtons();
+    
+  } catch (error) {
+    console.error('Error loading event details:', error);
+    modalBody.innerHTML = `<div class="modal-loading" style="color: red;">Error loading event details</div>`;
+  }
+}
+
+// Fetch event details from Neon
+async function fetchEventDetails(eventId) {
+  try {
+    const response = await fetch(`/api/fetch-neon?query=event-details&id=${eventId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching event details:', error);
+    return { error: error.message };
+  }
+}
+
+// Fetch navigation event ID (prev/next)
+async function fetchNavigationId(currentId, direction, appName = null) {
+  try {
+    const params = new URLSearchParams({
+      query: 'event-navigation',
+      id: currentId,
+      direction: direction
+    });
+    if (appName) {
+      params.append('app_name', appName);
+    }
+    
+    const response = await fetch(`/api/fetch-neon?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.id; // Returns null if no next/prev event
+  } catch (error) {
+    console.error(`Error fetching ${direction} event ID:`, error);
+    return null;
+  }
+}
+
+// Pre-load previous and next events
+async function preloadNavigationEvents(currentId, context, appName) {
+  const appNameForNav = context === 'app' ? appName : null;
+  
+  // Fetch prev/next IDs
+  const [prevId, nextId] = await Promise.all([
+    fetchNavigationId(currentId, 'prev', appNameForNav),
+    fetchNavigationId(currentId, 'next', appNameForNav)
+  ]);
+  
+  modalState.prevId = prevId;
+  modalState.nextId = nextId;
+  
+  // Pre-load event data for prev/next
+  const loadPromises = [];
+  if (prevId) {
+    loadPromises.push(
+      fetchEventDetails(prevId).then(data => {
+        modalState.prevData = data;
+      }).catch(err => {
+        console.error('Error pre-loading prev event:', err);
+        modalState.prevData = null;
+      })
+    );
+  }
+  if (nextId) {
+    loadPromises.push(
+      fetchEventDetails(nextId).then(data => {
+        modalState.nextData = data;
+      }).catch(err => {
+        console.error('Error pre-loading next event:', err);
+        modalState.nextData = null;
+      })
+    );
+  }
+  
+  await Promise.all(loadPromises);
+}
+
+// Display event data in modal
+function displayEventInModal(eventData) {
+  const modalBody = document.getElementById('modalBody');
+  
+  // Format event data as pretty JSON
+  const eventJson = JSON.stringify(eventData, null, 2);
+  
+  // Build HTML
+  let html = '<div class="modal-event-info">';
+  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">ID:</span> <span class="modal-event-info-value">${eventData.id || 'N/A'}</span></div>`;
+  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">App Name:</span> <span class="modal-event-info-value">${eventData.app_name || 'N/A'}</span></div>`;
+  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Event Name:</span> <span class="modal-event-info-value">${eventData.event_name || 'N/A'}</span></div>`;
+  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Organization:</span> <span class="modal-event-info-value">${eventData.org || 'N/A'}</span></div>`;
+  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Timestamp:</span> <span class="modal-event-info-value">${eventData.timestamp || 'N/A'}</span></div>`;
+  if (eventData.created_at) {
+    html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Created At:</span> <span class="modal-event-info-value">${eventData.created_at}</span></div>`;
+  }
+  if (eventData.updated_at) {
+    html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Updated At:</span> <span class="modal-event-info-value">${eventData.updated_at}</span></div>`;
+  }
+  html += '</div>';
+  
+  html += '<div class="modal-json">' + escapeHtml(eventJson) + '</div>';
+  
+  modalBody.innerHTML = html;
+}
+
+// Escape HTML for safe display
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Update navigation buttons visibility
+function updateNavigationButtons() {
+  const prevBtn = document.getElementById('modalPrevBtn');
+  const nextBtn = document.getElementById('modalNextBtn');
+  
+  prevBtn.style.display = modalState.prevId ? 'flex' : 'none';
+  nextBtn.style.display = modalState.nextId ? 'flex' : 'none';
+  
+  prevBtn.disabled = !modalState.prevId;
+  nextBtn.disabled = !modalState.nextId;
+}
+
+// Navigate to previous event
+async function navigateToPrev() {
+  if (!modalState.prevId) return;
+  
+  const modalBody = document.getElementById('modalBody');
+  modalBody.innerHTML = '<div class="modal-loading">Loading previous event...</div>';
+  
+  // Use pre-loaded data if available, otherwise fetch
+  let eventData = modalState.prevData;
+  if (!eventData) {
+    eventData = await fetchEventDetails(modalState.prevId);
+  }
+  
+  if (eventData.error) {
+    modalBody.innerHTML = `<div class="modal-loading" style="color: red;">Error: ${eventData.error}</div>`;
+    return;
+  }
+  
+  // Update state
+  modalState.currentId = modalState.prevId;
+  const oldNextId = modalState.nextId;
+  modalState.nextId = modalState.currentId; // Current becomes next
+  
+  // Display event
+  displayEventInModal(eventData);
+  
+  // Pre-load new previous event
+  const newPrevId = await fetchNavigationId(modalState.currentId, 'prev', modalState.appName);
+  modalState.prevId = newPrevId;
+  
+  // Pre-load new previous event data
+  if (newPrevId) {
+    fetchEventDetails(newPrevId).then(data => {
+      modalState.prevData = data;
+    }).catch(err => {
+      console.error('Error pre-loading prev event:', err);
+      modalState.prevData = null;
+    });
+  } else {
+    modalState.prevData = null;
+  }
+  
+  // Keep next data (was current, now next)
+  modalState.nextData = eventData;
+  
+  // Update buttons
+  updateNavigationButtons();
+}
+
+// Navigate to next event
+async function navigateToNext() {
+  if (!modalState.nextId) return;
+  
+  const modalBody = document.getElementById('modalBody');
+  modalBody.innerHTML = '<div class="modal-loading">Loading next event...</div>';
+  
+  // Use pre-loaded data if available, otherwise fetch
+  let eventData = modalState.nextData;
+  if (!eventData) {
+    eventData = await fetchEventDetails(modalState.nextId);
+  }
+  
+  if (eventData.error) {
+    modalBody.innerHTML = `<div class="modal-loading" style="color: red;">Error: ${eventData.error}</div>`;
+    return;
+  }
+  
+  // Update state
+  modalState.currentId = modalState.nextId;
+  const oldPrevId = modalState.prevId;
+  modalState.prevId = modalState.currentId; // Current becomes prev
+  
+  // Display event
+  displayEventInModal(eventData);
+  
+  // Pre-load new next event
+  const newNextId = await fetchNavigationId(modalState.currentId, 'next', modalState.appName);
+  modalState.nextId = newNextId;
+  
+  // Pre-load new next event data
+  if (newNextId) {
+    fetchEventDetails(newNextId).then(data => {
+      modalState.nextData = data;
+    }).catch(err => {
+      console.error('Error pre-loading next event:', err);
+      modalState.nextData = null;
+    });
+  } else {
+    modalState.nextData = null;
+  }
+  
+  // Keep prev data (was current, now prev)
+  modalState.prevData = eventData;
+  
+  // Update buttons
+  updateNavigationButtons();
+}
+
+// Close modal
+function closeEventModal() {
+  const modal = document.getElementById('eventModal');
+  modal.style.display = 'none';
+  modalState = {
+    currentId: null,
+    context: null,
+    appName: null,
+    prevId: null,
+    nextId: null,
+    prevData: null,
+    nextData: null
+  };
+}
+
+// Initialize modal event listeners
+function initializeModal() {
+  const modal = document.getElementById('eventModal');
+  const closeBtn = document.querySelector('.modal-close');
+  const prevBtn = document.getElementById('modalPrevBtn');
+  const nextBtn = document.getElementById('modalNextBtn');
+  const overlay = document.querySelector('.modal-overlay');
+  
+  // Close button
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeEventModal);
+  }
+  
+  // Overlay click
+  if (overlay) {
+    overlay.addEventListener('click', closeEventModal);
+  }
+  
+  // Navigation buttons
+  if (prevBtn) {
+    prevBtn.addEventListener('click', navigateToPrev);
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener('click', navigateToNext);
+  }
+  
+  // ESC key to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display !== 'none') {
+      closeEventModal();
+    }
+  });
 }
 

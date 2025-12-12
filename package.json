@@ -7,7 +7,8 @@
     "dev": "python -m http.server 8000",
     "update-neon-schema": "node scripts/update-neon-schema.js",
     "fix-neon-timestamps": "node scripts/fix-neon-timestamps.js",
-    "test-performance": "node scripts/performance-test.js"
+    "test-performance": "node scripts/performance-test.js",
+    "remove-event-id-column": "node scripts/remove-event-id-column.js"
   },
   "dependencies": {
     "pg": "^8.11.3"

@@ -88,6 +88,16 @@ export default async function (req, res) {
         result = await queryEventDetails(client, parseInt(id));
         break;
 
+      case 'event-navigation':
+        // Get previous/next event IDs for navigation
+        // Requires: id (current event), app_name (optional, for app-specific navigation), direction ('prev' or 'next')
+        const { app_name: nav_app_name, direction } = req.query;
+        if (!id || !direction) {
+          return res.status(400).json({ error: 'id and direction parameters required for event-navigation query' });
+        }
+        result = await queryEventNavigation(client, parseInt(id), nav_app_name, direction);
+        break;
+
       case 'health':
         result = await queryHealth(client);
         break;
@@ -216,11 +226,10 @@ async function queryStatistics(client, app_name) {
 }
 
 // Query full event details by ID
-async function queryEventDetails(client, event_id) {
+async function queryEventDetails(client, id) {
   const queryText = `
     SELECT 
       id,
-      event_id,
       app_name,
       event_name,
       org,
@@ -232,7 +241,7 @@ async function queryEventDetails(client, event_id) {
     WHERE id = $1
   `;
 
-  const result = await client.query(queryText, [event_id]);
+  const result = await client.query(queryText, [id]);
 
   if (result.rows.length === 0) {
     return { error: 'Event not found' };
@@ -250,6 +259,63 @@ async function queryEventDetails(client, event_id) {
   }
 
   return event;
+}
+
+// Query event navigation (previous/next event ID)
+async function queryEventNavigation(client, current_id, app_name, direction) {
+  let queryText, params;
+  
+  if (app_name) {
+    // App-specific navigation: find prev/next event for the same app
+    if (direction === 'next') {
+      queryText = `
+        SELECT id
+        FROM app_usage_events
+        WHERE app_name = $1 AND id > $2
+        ORDER BY id ASC
+        LIMIT 1
+      `;
+      params = [app_name, current_id];
+    } else { // prev
+      queryText = `
+        SELECT id
+        FROM app_usage_events
+        WHERE app_name = $1 AND id < $2
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+      params = [app_name, current_id];
+    }
+  } else {
+    // All events navigation: find prev/next event across all apps
+    if (direction === 'next') {
+      queryText = `
+        SELECT id
+        FROM app_usage_events
+        WHERE id > $1
+        ORDER BY id ASC
+        LIMIT 1
+      `;
+      params = [current_id];
+    } else { // prev
+      queryText = `
+        SELECT id
+        FROM app_usage_events
+        WHERE id < $1
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+      params = [current_id];
+    }
+  }
+  
+  const result = await client.query(queryText, params);
+  
+  if (result.rows.length === 0) {
+    return { id: null }; // No next/prev event
+  }
+  
+  return { id: result.rows[0].id };
 }
 
 // Health check - test database connection

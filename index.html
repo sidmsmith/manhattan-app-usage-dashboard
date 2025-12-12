@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manhattan App Usage Dashboard v1.0.0</title>
+  <title>Manhattan App Usage Dashboard v2.0.0</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
@@ -53,6 +53,28 @@
     <div class="cards-container" id="cardsContainer">
       <!-- Cards will be dynamically generated here -->
       <div class="loading-message">Loading app data...</div>
+    </div>
+  </div>
+
+  <!-- Event Details Modal -->
+  <div id="eventModal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Event Details</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-navigation">
+        <button class="modal-nav-btn modal-nav-prev" id="modalPrevBtn" aria-label="Previous event">
+          <span>&#8249;</span>
+        </button>
+        <div class="modal-body" id="modalBody">
+          <div class="modal-loading">Loading event details...</div>
+        </div>
+        <button class="modal-nav-btn modal-nav-next" id="modalNextBtn" aria-label="Next event">
+          <span>&#8250;</span>
+        </button>
+      </div>
     </div>
   </div>
 
