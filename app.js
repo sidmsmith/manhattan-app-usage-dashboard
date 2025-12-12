@@ -50,6 +50,38 @@ let appData = {};
 let sortOrder = 'recent';
 let sortableInstance = null;
 
+// Client-side cache for API responses (30 second TTL)
+const CACHE_TTL = 30000; // 30 seconds in milliseconds
+const apiCache = {
+  // Cache structure: { key: { data: {...}, timestamp: number } }
+  get(key) {
+    const cached = this._cache[key];
+    if (!cached) return null;
+    
+    const age = Date.now() - cached.timestamp;
+    if (age > CACHE_TTL) {
+      // Cache expired
+      delete this._cache[key];
+      return null;
+    }
+    
+    return cached.data;
+  },
+  
+  set(key, data) {
+    this._cache[key] = {
+      data: data,
+      timestamp: Date.now()
+    };
+  },
+  
+  clear() {
+    this._cache = {};
+  },
+  
+  _cache: {}
+};
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   // Update version in header
