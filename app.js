@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.0.0';
+const DASHBOARD_VERSION = '2.0.1';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -759,6 +759,13 @@ async function openEventModal(eventId, context, appName = null) {
       return;
     }
     
+    // Update modal header with app name
+    const modalHeader = document.querySelector('.modal-header h2');
+    if (modalHeader && eventData.app_name) {
+      const appDisplayName = getAppDisplayName(eventData.app_name);
+      modalHeader.textContent = `Event Details: ${appDisplayName}`;
+    }
+    
     // Display event data
     displayEventInModal(eventData);
     
@@ -919,6 +926,13 @@ async function navigateToPrev() {
   modalState.currentId = modalState.prevId;
   const oldNextId = modalState.nextId;
   modalState.nextId = modalState.currentId; // Current becomes next
+  
+  // Update modal header with app name
+  const modalHeader = document.querySelector('.modal-header h2');
+  if (modalHeader && eventData.app_name) {
+    const appDisplayName = getAppDisplayName(eventData.app_name);
+    modalHeader.textContent = `Event Details: ${appDisplayName}`;
+  }
   
   // Display event
   displayEventInModal(eventData);
