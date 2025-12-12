@@ -1,9 +1,9 @@
 # Production Readiness Checklist
 
-## ✅ Completed for v2.0.0
+## ✅ Completed for v2.1.0
 
 ### Code Quality
-- [x] Version numbers updated (v2.0.0)
+- [x] Version numbers updated (v2.1.0)
 - [x] Obsolete files removed (fetch-mariadb.js, phase docs)
 - [x] Testing documentation cleaned up
 - [x] CHANGELOG.md created
@@ -51,6 +51,8 @@
 - [x] All apps display data correctly
 - [x] Recent events showing for all apps
 - [x] Performance benchmarks met
+- [x] Modal functionality working (v2.1.0)
+- [x] Context-aware navigation verified
 - [ ] Load testing (if expected high traffic)
 - [ ] Browser compatibility testing
 
@@ -69,12 +71,15 @@
 - Documentation complete
 
 **Known Limitations:**
-- No modal for detailed event viewing (removed in v0.3.7)
 - Relies on Home Assistant for summary statistics (SQL sensors)
 - Requires AppDaemon for Neon writes
 
-**Future Enhancements (Post-v2.0.0):**
-- Modal for detailed event viewing (if needed)
+**Recent Enhancements (v2.1.0):**
+- ✅ Modal for detailed event viewing (fully functional)
+- ✅ Context-aware navigation (summary vs app-specific)
+- ✅ Pre-loading for smooth navigation
+
+**Future Enhancements:**
 - Real-time updates via WebSocket
 - Advanced filtering and search
 - Data export functionality

@@ -90,3 +90,14 @@ The dashboard now includes a modal that displays full event details when clickin
 - All event identification uses `id` (primary key)
 - Navigation is sequential by `id`, not chronological
 - Pre-loading ensures smooth navigation experience
+- Modal header dynamically updates with app name when navigating
+- Summary context navigation goes across all events, app context stays within app
+
+## Version History
+
+- **v2.1.0** (2025-12-13): "Modal Works" - Full modal functionality with context-aware navigation
+  - Clickable events in summary and app cards
+  - Modal with pretty-printed JSON
+  - Navigation arrows with pre-loading
+  - Dynamic modal header with app name
+  - Fixed navigation context logic
