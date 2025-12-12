@@ -79,6 +79,11 @@ This dashboard provides real-time visibility into app usage metrics across multi
 - **Responsive Design**: Mobile-friendly with single-column layout
 - **Auto-refresh**: Automatically updates data every 60 seconds
 - **Timezone Support**: Events displayed in local browser timezone (24-hour format)
+- **Event Details Modal**: Click any Recent Event to view full JSON details
+  - Pretty-printed JSON display
+  - Context-aware navigation (summary vs app-specific)
+  - Pre-loaded navigation for smooth browsing
+  - Dynamic modal header with app name
 
 ## Setup
 

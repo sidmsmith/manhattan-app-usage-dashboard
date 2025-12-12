@@ -2,6 +2,36 @@
 
 All notable changes to the Manhattan App Usage Dashboard project will be documented in this file.
 
+## [2.1.0] - 2025-12-13
+
+### 🎉 Release: "Modal Works"
+
+**Major Features:**
+- ✅ Event Details Modal - Click any Recent Event to view full JSON
+- ✅ Context-aware navigation (summary vs app-specific)
+- ✅ Pre-loading for smooth navigation experience
+- ✅ Modal header displays app name dynamically
+- ✅ All Recent Events are clickable (summary and app cards)
+
+**Improvements:**
+- Fixed navigation logic: summary context navigates across all events, app context stays within app
+- Added visual feedback (cursor pointer) for clickable events
+- Improved error handling and debugging for missing event IDs
+- Better fallback handling for SQL sensor events
+
+**Technical Changes:**
+- Removed `event_id` column from Neon (using `id` primary key exclusively)
+- Added `event-details` and `event-navigation` API endpoints
+- Implemented modal state management with pre-loading
+- Added `getAppDisplayName()` function for human-readable app names
+
+**Documentation:**
+- Created `MODAL_FEATURE.md` with complete modal documentation
+- Updated README with modal feature details
+- Added migration guide for removing `event_id` column
+
+---
+
 ## [2.0.0] - 2025-12-12
 
 ### 🎉 Release: "Fully works with Neon before Modal"

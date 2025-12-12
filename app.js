@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.0.2';
+const DASHBOARD_VERSION = '2.1.0';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -1017,8 +1017,9 @@ async function navigateToNext() {
   // Display event
   displayEventInModal(eventData);
   
-  // Pre-load new next event
-  const newNextId = await fetchNavigationId(modalState.currentId, 'next', modalState.appName);
+  // Pre-load new next event (use context to determine if app-specific)
+  const appNameForNav = modalState.context === 'app' ? modalState.appName : null;
+  const newNextId = await fetchNavigationId(modalState.currentId, 'next', appNameForNav);
   modalState.nextId = newNextId;
   
   // Pre-load new next event data

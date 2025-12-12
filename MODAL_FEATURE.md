@@ -1,8 +1,11 @@
 # Event Details Modal Feature
 
+**Version**: 2.1.0  
+**Status**: ✅ Fully Functional
+
 ## Overview
 
-The dashboard now includes a modal that displays full event details when clicking on any Recent Event. The modal shows pretty-printed JSON of the complete event record and includes navigation arrows to browse through events.
+The dashboard now includes a modal that displays full event details when clicking on any Recent Event. The modal shows pretty-printed JSON of the complete event record and includes navigation arrows to browse through events. This feature was introduced in v2.1.0 ("Modal Works").
 
 ## Features
 
