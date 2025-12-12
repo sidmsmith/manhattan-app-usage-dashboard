@@ -111,3 +111,4 @@ Then update `store_event.py` to use `dashboard_user` instead of `homeassistant`.
 - ⏭️ Security: Create dedicated user with limited permissions
 
 
+

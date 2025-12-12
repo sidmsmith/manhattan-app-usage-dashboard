@@ -227,3 +227,4 @@ Once AppDaemon is working:
 4. Set up proper password management (secrets.yaml or environment variables)
 
 
+

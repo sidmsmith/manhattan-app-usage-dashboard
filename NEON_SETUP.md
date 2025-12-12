@@ -224,3 +224,4 @@ SELECT COUNT(*) FROM app_usage_events;
 ---
 
 **Setup Complete!** Your dashboard can now query Neon PostgreSQL for full event data.
+

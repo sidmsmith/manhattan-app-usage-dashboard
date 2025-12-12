@@ -127,26 +127,14 @@ def insert_to_neon(neon_conn, events, batch_size=100):
         
         for event in batch:
             try:
-                # Check if event already exists (by event_id if column exists, otherwise by app_name + timestamp + event_name)
-                # First try event_id (preferred method)
-                try:
-                    cursor.execute(
-                        "SELECT id FROM app_usage_events WHERE event_id = %s",
-                        (event['event_id'],)
-                    )
-                    if cursor.fetchone():
-                        skipped += 1
-                        continue
-                except psycopg2.errors.UndefinedColumn:
-                    # event_id column doesn't exist, use alternative duplicate check
-                    cursor.execute(
-                        """SELECT id FROM app_usage_events 
-                           WHERE app_name = %s AND timestamp = %s AND event_name = %s""",
-                        (event['app_name'], event['timestamp'], event['event_name'])
-                    )
-                    if cursor.fetchone():
-                        skipped += 1
-                        continue
+                # Check if event already exists (by event_id)
+                cursor.execute(
+                    "SELECT id FROM app_usage_events WHERE event_id = %s",
+                    (event['event_id'],)
+                )
+                if cursor.fetchone():
+                    skipped += 1
+                    continue
                 
                 # Insert event
                 insert_query = """
@@ -292,3 +280,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

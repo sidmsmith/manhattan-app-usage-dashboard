@@ -212,3 +212,4 @@ python3 manhattan_dashboard/migrate_ha_to_neon.py
 ---
 
 **Ready to migrate!** Once `psycopg2-binary` is installed, you can run the script from HA.
+

@@ -56,3 +56,4 @@ After setting the environment variable and deploying:
 ⚠️ **Never commit this connection string to Git!** It contains sensitive credentials.
 
 The connection string is stored securely in Vercel's environment variables and is only accessible to your serverless functions at runtime.
+

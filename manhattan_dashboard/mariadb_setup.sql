@@ -86,3 +86,4 @@ SELECT COUNT(*) AS table_count FROM information_schema.tables
 SELECT 'dashboard_user' AS user, 'manhattan_app_usage' AS database;
 
 
+

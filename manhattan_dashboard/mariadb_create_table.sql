@@ -71,3 +71,4 @@ SELECT COUNT(*) AS table_count FROM information_schema.tables
 DESCRIBE app_usage_events;
 
 
+

@@ -130,3 +130,4 @@ class CustomEventLogger(hass.Hass):
 
         except Exception as e:
             self.log(f"🟡 Neon insert failed: {str(e)}", level="WARNING")
+

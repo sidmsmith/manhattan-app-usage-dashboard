@@ -236,3 +236,4 @@ python3 migrate_ha_to_neon.py
 ---
 
 **Ready to migrate!** Run the script when you're ready to copy historical data to Neon.
+

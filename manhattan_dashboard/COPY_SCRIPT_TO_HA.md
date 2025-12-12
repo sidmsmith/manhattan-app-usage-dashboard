@@ -85,3 +85,4 @@ python3 manhattan_dashboard/migrate_ha_to_neon.py
 ---
 
 **Quickest method:** Use File Editor add-on in HA to create the file and paste the script contents.
+

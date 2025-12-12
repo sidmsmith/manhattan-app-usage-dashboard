@@ -64,3 +64,4 @@ FROM app_usage_events
 WHERE timestamp >= '1970-01-01'::timestamp
 ORDER BY timestamp DESC
 LIMIT 10;
+

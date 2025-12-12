@@ -106,3 +106,4 @@ Extract the timestamp from `event_data->>'timestamp'` and update the `timestamp`
 1. **Refresh the dashboard** - timestamps should now display correctly
 2. **Verify** a few events show the correct dates/times
 3. **Check** that the "12/31 14:29" issue is resolved
+

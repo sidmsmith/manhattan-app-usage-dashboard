@@ -143,3 +143,4 @@ Once the schema is updated:
 ---
 
 **Ready to update!** Run the SQL script in Neon SQL Editor to complete the schema setup.
+
