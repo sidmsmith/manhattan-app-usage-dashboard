@@ -2,8 +2,10 @@
   "name": "manhattan-app-usage-dashboard",
   "version": "1.0.0",
   "description": "Manhattan App Usage Dashboard",
+  "type": "module",
   "scripts": {
-    "dev": "python -m http.server 8000"
+    "dev": "python -m http.server 8000",
+    "update-neon-schema": "node scripts/update-neon-schema.js"
   },
   "dependencies": {
     "pg": "^8.11.3"

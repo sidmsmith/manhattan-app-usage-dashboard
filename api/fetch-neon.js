@@ -127,7 +127,8 @@ async function queryRecentEvents(client, app_name, limit) {
         event_name,
         org,
         timestamp,
-        event_data
+        event_data,
+        created_at
       FROM app_usage_events
       WHERE app_name = $1
       ORDER BY timestamp DESC
@@ -142,7 +143,8 @@ async function queryRecentEvents(client, app_name, limit) {
         event_name,
         org,
         timestamp,
-        event_data
+        event_data,
+        created_at
       FROM app_usage_events
       ORDER BY timestamp DESC
       LIMIT $1
