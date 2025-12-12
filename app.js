@@ -399,8 +399,7 @@ function formatLocalTime(utcTimestamp) {
   const mmdd = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
   const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
   
-  console.log('[formatLocalTime] UTC timestamp:', utcTimestamp, '→ Local time:', `${mmdd} ${time}`);
-  
+  // Removed verbose logging - time conversion is working correctly
   return { mmdd, time };
 }
 
