@@ -28,20 +28,21 @@ if (typeof window.CONFIG === 'undefined') {
 }
 
 // App definitions with display names
+// neonAppName: Maps dashboard app.id to actual app_name in Neon database
 const APPS = [
-  { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓' },
-  { id: 'mhe_console', name: 'MHE Console', icon: '🖥️' },
-  { id: 'appt_app', name: 'Check In Kiosk', icon: '📅' },
-  { id: 'pos_items', name: 'POS Items', icon: '📦' },
-  { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚' },
-  { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍' },
-  { id: 'forecast_import', name: 'Import Forecast', icon: '📊' },
-  { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠' },
-  { id: 'item_generator_gallery', name: 'Item Generator', icon: '🖼️' },
-  { id: 'order_generator', name: 'Order Generator', icon: '📋' },
-  { id: 'schedule_app', name: 'Schedule Appointment', icon: '📆' },
-  { id: 'todolist', name: 'Todo List', icon: '✅' },
-  { id: 'update_appt', name: 'Update Appointment', icon: '✏️' },
+  { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
+  { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
+  { id: 'appt_app', name: 'Check In Kiosk', icon: '📅', neonAppName: 'appt-app' },
+  { id: 'pos_items', name: 'POS Items', icon: '📦', neonAppName: 'POS Items' },
+  { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚', neonAppName: 'driver-pickup' },
+  { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍', neonAppName: 'facility-addresses' },
+  { id: 'forecast_import', name: 'Import Forecast', icon: '📊', neonAppName: 'Import Forecast' },
+  { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠', neonAppName: 'apps-homepage' },
+  { id: 'item_generator_gallery', name: 'Item Generator', icon: '🖼️', neonAppName: 'Item Generator' },
+  { id: 'order_generator', name: 'Order Generator', icon: '📋', neonAppName: 'Order Generator' },
+  { id: 'schedule_app', name: 'Schedule Appointment', icon: '📆', neonAppName: 'schedule-app' },
+  { id: 'todolist', name: 'Todo List', icon: '✅', neonAppName: 'todolist' },
+  { id: 'update_appt', name: 'Update Appointment', icon: '✏️', neonAppName: 'update-appt' },
 ];
 
 // State
@@ -274,8 +275,8 @@ async function loadAppData() {
   // - Use SQL sensors for summary stats (totalEvents, events24h, totalOpens)
   // - Try Neon first for recent events (full JSON data), fallback to SQL sensors
     
-    // Convert app.id to app_name format (e.g., 'mhe_console' -> 'mhe-console')
-    const appName = app.id.replace(/_/g, '-');
+    // Use neonAppName if defined, otherwise convert app.id (e.g., 'mhe_console' -> 'mhe-console')
+    const appName = app.neonAppName || app.id.replace(/_/g, '-');
     
     // Fetch summary stats from SQL sensors (always use these for now)
     const [totalEvents, events24h, totalOpens] = await Promise.all([
@@ -438,6 +439,7 @@ function getAppShortName(appName) {
     'apps-homepage': 'Homepage',
     'item-generator-gallery': 'Item Gen',
     'Item Generator': 'Item Gen',
+    'order-generator': 'Order Gen',
     'order-generator-app': 'Order Gen',
     'Order Generator': 'Order Gen',
     'schedule-app': 'Schedule',
