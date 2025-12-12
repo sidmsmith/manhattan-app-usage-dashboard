@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.0.1';
+const DASHBOARD_VERSION = '2.0.2';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -292,10 +292,16 @@ async function loadOverallSummary() {
         timestamp: event.timestamp,
         org: event.org,
         app_name: event.app_name,
-        id: event.id, // Neon ID
+        id: event.id, // Neon ID - should always be present
         event_data: event.event_data // Full JSON data available!
       }));
       console.log('[loadOverallSummary] Using Neon data for recent events:', events.length);
+      // Debug: check if any events are missing id
+      const eventsWithoutId = events.filter(e => !e.id);
+      if (eventsWithoutId.length > 0) {
+        console.warn('[loadOverallSummary] Some events missing id:', eventsWithoutId.length, 'out of', events.length);
+        console.warn('[loadOverallSummary] Sample event without id:', eventsWithoutId[0]);
+      }
     } else {
     // Fallback to SQL sensor
     const recentEvents = await fetchSensorData('sensor.all_apps_recent_events');
@@ -313,6 +319,15 @@ async function loadOverallSummary() {
       } else if (Array.isArray(eventsData)) {
         events = eventsData;
       }
+      
+      // SQL sensor events may have event_id instead of id - try to map it
+      // But note: SQL sensor events won't be clickable since they don't have Neon id
+      events = events.map(event => ({
+        ...event,
+        id: event.id || event.event_id || null // Try to use id, fallback to event_id, or null
+      }));
+      
+      console.warn('[loadOverallSummary] Using SQL sensor fallback - events may not have Neon id');
     }
     // Using SQL sensor data (Neon unavailable - fallback mode)
   }
@@ -472,7 +487,13 @@ function formatLocalTime(utcTimestamp) {
 function createEventItem(event) {
   const div = document.createElement('div');
   div.className = 'event-item';
-  div.dataset.eventId = event.id;
+  
+  // Debug: log event to see if id is present
+  if (!event.id) {
+    console.warn('[createEventItem] Event missing id:', event);
+  }
+  
+  div.dataset.eventId = event.id || '';
   div.dataset.appName = event.app_name || '';
   div.dataset.context = 'summary'; // Context: summary or app-specific
 
@@ -489,6 +510,10 @@ function createEventItem(event) {
   // Add click handler for modal (only if event.id exists)
   if (event.id) {
     div.addEventListener('click', () => openEventModal(event.id, 'summary', event.app_name));
+    div.style.cursor = 'pointer'; // Visual indicator
+  } else {
+    console.warn('[createEventItem] Skipping click handler - no id for event:', event.event_name, event.app_name);
+    div.style.cursor = 'default';
   }
   
   return div;
