@@ -22,6 +22,9 @@ Thumbs.db
 dist/
 build/
 
+# Dependencies
+node_modules/
+
 # MariaDB configuration (contains passwords)
 manhattan_dashboard/.my.cnf
 config/.my.cnf
