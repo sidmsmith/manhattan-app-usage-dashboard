@@ -203,8 +203,14 @@ async function fetchSensorData(entityId) {
 }
 
 // Load all dashboard data
-async function loadDashboardData() {
+// forceRefresh: if true, clears cache before loading (for manual refresh)
+async function loadDashboardData(forceRefresh = false) {
   try {
+    // Clear cache if force refresh is requested
+    if (forceRefresh) {
+      apiCache.clear();
+    }
+    
     // Load overall summary
     await loadOverallSummary();
 
