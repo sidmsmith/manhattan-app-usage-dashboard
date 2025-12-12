@@ -323,13 +323,38 @@ async function loadOverallSummary() {
 }
 
 // Load data for all apps
+// Uses query batching: fetches all events in one query, then groups by app
 async function loadAppData() {
+  // Step 1: Fetch all recent events in one batch query (enough for all apps)
+  // We fetch 200 events to ensure we have enough for all apps (13 apps * 15 events = 195 max)
+  let allEvents = [];
+  const neonData = await fetchNeonData('recent-events', { limit: '200' });
+  
+  if (neonData && neonData.events && Array.isArray(neonData.events)) {
+    // Convert to expected format
+    allEvents = neonData.events.map(event => ({
+      event_name: event.event_name,
+      timestamp: event.timestamp,
+      org: event.org,
+      app_name: event.app_name,
+      id: event.id,
+      event_data: event.event_data
+    }));
+  }
+  
+  // Step 2: Group events by app_name for efficient lookup
+  const eventsByApp = {};
+  allEvents.forEach(event => {
+    const appName = event.app_name;
+    if (!eventsByApp[appName]) {
+      eventsByApp[appName] = [];
+    }
+    eventsByApp[appName].push(event);
+  });
+  
+  // Step 3: Process each app (fetch stats + get recent events from grouped data)
   const promises = APPS.map(async (app) => {
-  // Hybrid approach
-  // - Use SQL sensors for summary stats (totalEvents, events24h, totalOpens)
-  // - Try Neon first for recent events (full JSON data), fallback to SQL sensors
-    
-    // Use neonAppName if defined, otherwise convert app.id (e.g., 'mhe_console' -> 'mhe-console')
+    // Use neonAppName if defined, otherwise convert app.id
     const appName = app.neonAppName || app.id.replace(/_/g, '-');
     
     // Fetch summary stats from SQL sensors (always use these for now)
@@ -339,29 +364,15 @@ async function loadAppData() {
       fetchSensorData(`sensor.${app.id}_total_opens`)
     ]);
 
-    // Try Neon for recent events (full JSON), fallback to SQL sensor
+    // Get recent events from batched query (already grouped by app_name)
     let events = [];
-    const neonData = await fetchNeonData('recent-events', { 
-      app_name: appName, 
-      limit: '15' 
-    });
-    
-    if (neonData && neonData.events && Array.isArray(neonData.events)) {
-      // Use Neon data - convert to expected format
-      events = neonData.events.map(event => ({
-        event_name: event.event_name,
-        timestamp: event.timestamp,
-        org: event.org,
-        app_name: event.app_name,
-        id: event.id, // Neon ID
-        event_data: event.event_data // Full JSON data available!
-      }));
-      // Using Neon data for recent events (verbose logging removed)
+    if (eventsByApp[appName] && Array.isArray(eventsByApp[appName])) {
+      // Take top 15 events for this app (already sorted by timestamp DESC from query)
+      events = eventsByApp[appName].slice(0, 15);
     } else {
-      // Fallback to SQL sensor
+      // Fallback: if Neon query failed or app not found, try SQL sensor
       const recentEvents = await fetchSensorData(`sensor.${app.id}_recent_events`);
       
-      // Parse events from attributes.events (JSON string) - state is "unknown" due to 255 char limit
       if (recentEvents?.attributes?.events) {
         const eventsData = recentEvents.attributes.events;
         if (typeof eventsData === 'string') {
@@ -375,7 +386,6 @@ async function loadAppData() {
           events = eventsData;
         }
       }
-      console.log(`[loadAppData] Using SQL sensor data for ${app.id}: ${events.length} events`);
     }
     
     if (!Array.isArray(events)) {
