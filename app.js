@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.2.0';
+const DASHBOARD_VERSION = '2.3.0';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -32,7 +32,7 @@ if (typeof window.CONFIG === 'undefined') {
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
-  { id: 'appt_app', name: 'Check In Kiosk', icon: '📅', neonAppName: 'appt-app' },
+  { id: 'appt_app', name: 'Check In Kiosk', icon: '📅', neonAppName: 'appt-app' }, // check_in app sends app_name appt-app
   { id: 'pos_items', name: 'POS Items', icon: '📦', neonAppName: 'POS Items' },
   { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚', neonAppName: 'driver-pickup' },
   { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍', neonAppName: 'facility-addresses' },
@@ -558,6 +558,7 @@ function getAppDisplayName(appName) {
   // Find matching app from APPS array
   const app = APPS.find(a => 
     a.neonAppName === appName || 
+    (appName === 'check-in' && a.id === 'appt_app') ||
     a.id.replace(/_/g, '-') === appName ||
     a.name === appName
   );
@@ -572,6 +573,7 @@ function getAppShortName(appName) {
     'mhe-console': 'MHE',
     'appt-app': 'APPT',
     'appt_app': 'APPT',
+    'check-in': 'APPT',
     'POS Items': 'POS',
     'driver-pickup': 'Driver',
     'driver_pickup': 'Driver',
