@@ -202,6 +202,23 @@ async function fetchNeonData(query, params = {}) {
   }
 }
 
+/**
+ * Summary counters from Neon (same DB as recent events). Shape matches HA sensor { state }.
+ * @param {string | null} appName - null = all apps aggregate
+ */
+async function fetchSummaryStatsFromNeon(appName = null) {
+  const params = appName ? { app_name: appName } : {};
+  const stats = await fetchNeonData('statistics', params);
+  if (!stats || stats.error != null || stats.total_events === undefined) {
+    return null;
+  }
+  return {
+    totalEvents: { state: String(stats.total_events) },
+    events24h: { state: String(stats.events_last_24h) },
+    totalOpens: { state: String(stats.total_opens) },
+  };
+}
+
 // Fetch data from Home Assistant API
 async function fetchSensorData(entityId) {
   try {
@@ -260,16 +277,22 @@ async function loadDashboardData(forceRefresh = false) {
 
 // Load overall summary data
 async function loadOverallSummary() {
-  // Hybrid approach
-  // - Use SQL sensors for summary stats
-  // - Try Neon first for recent events (full JSON), fallback to SQL sensor
-  
-  // Fetch summary stats from SQL sensors (always use these for now)
-  const [totalEvents, events24h, totalOpens] = await Promise.all([
-    fetchSensorData('sensor.all_apps_total_events'),
-    fetchSensorData('sensor.all_apps_events_last_24h'),
-    fetchSensorData('sensor.all_apps_total_opens')
-  ]);
+  // Summary stats: Neon first (matches recent events), then HA SQL sensors
+  let totalEvents;
+  let events24h;
+  let totalOpens;
+  const neonSummary = await fetchSummaryStatsFromNeon(null);
+  if (neonSummary) {
+    totalEvents = neonSummary.totalEvents;
+    events24h = neonSummary.events24h;
+    totalOpens = neonSummary.totalOpens;
+  } else {
+    [totalEvents, events24h, totalOpens] = await Promise.all([
+      fetchSensorData('sensor.all_apps_total_events'),
+      fetchSensorData('sensor.all_apps_events_last_24h'),
+      fetchSensorData('sensor.all_apps_total_opens')
+    ]);
+  }
 
   if (totalEvents) {
     document.getElementById('total-events').textContent = totalEvents.state || '0';
@@ -281,11 +304,11 @@ async function loadOverallSummary() {
     document.getElementById('total-opens').textContent = totalOpens.state || '0';
   }
 
-    // Try Neon for recent events (all apps, full JSON), fallback to SQL sensor
-    let events = [];
-    const neonData = await fetchNeonData('recent-events', { limit: '15' });
-    
-    if (neonData && neonData.events && Array.isArray(neonData.events)) {
+  // Recent events: Neon first, then HA SQL sensor
+  let events = [];
+  const neonData = await fetchNeonData('recent-events', { limit: '15' });
+
+  if (neonData && neonData.events && Array.isArray(neonData.events)) {
       // Use Neon data - convert to expected format
       events = neonData.events.map(event => ({
         event_name: event.event_name,
@@ -373,12 +396,21 @@ async function loadAppData() {
     // Use neonAppName if defined, otherwise convert app.id
     const appName = app.neonAppName || app.id.replace(/_/g, '-');
     
-    // Fetch summary stats from SQL sensors (always use these for now)
-    const [totalEvents, events24h, totalOpens] = await Promise.all([
-      fetchSensorData(`sensor.${app.id}_total_events`),
-      fetchSensorData(`sensor.${app.id}_events_last_24h`),
-      fetchSensorData(`sensor.${app.id}_total_opens`)
-    ]);
+    let totalEvents;
+    let events24h;
+    let totalOpens;
+    const neonStats = await fetchSummaryStatsFromNeon(appName);
+    if (neonStats) {
+      totalEvents = neonStats.totalEvents;
+      events24h = neonStats.events24h;
+      totalOpens = neonStats.totalOpens;
+    } else {
+      [totalEvents, events24h, totalOpens] = await Promise.all([
+        fetchSensorData(`sensor.${app.id}_total_events`),
+        fetchSensorData(`sensor.${app.id}_events_last_24h`),
+        fetchSensorData(`sensor.${app.id}_total_opens`)
+      ]);
+    }
 
     // Get recent events from batched query (already grouped by app_name)
     let events = [];

@@ -190,13 +190,12 @@ async function queryStatistics(client, app_name) {
   let queryText, params;
 
   if (app_name) {
-    // PostgreSQL syntax: use -> for JSONB access, ->> for text extraction
     queryText = `
       SELECT 
         app_name,
         COUNT(*) AS total_events,
         COUNT(CASE WHEN timestamp >= NOW() - INTERVAL '24 hours' THEN 1 END) AS events_last_24h,
-        COUNT(CASE WHEN event_data->>'event_name' = 'app_opened' THEN 1 END) AS total_opens
+        COUNT(CASE WHEN event_name = 'app_opened' THEN 1 END) AS total_opens
       FROM app_usage_events
       WHERE app_name = $1
       GROUP BY app_name
@@ -336,4 +335,10 @@ async function queryHealth(client) {
     };
   }
 }
+
+
+
+
+
+
 
