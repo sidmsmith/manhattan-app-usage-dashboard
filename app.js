@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.4.0';
+const DASHBOARD_VERSION = '2.4.1';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -43,7 +43,7 @@ const APPS = [
   { id: 'schedule_app', name: 'Schedule Appointment', icon: '📆', neonAppName: 'schedule-app' },
   { id: 'todolist', name: 'Todo List', icon: '✅', neonAppName: 'todolist' },
   { id: 'update_appt', name: 'Update Appointment', icon: '✏️', neonAppName: 'update-appt' },
-  { id: 'cycle_count', name: 'Cycle Count', icon: '🔄', neonAppName: 'cycle-count' },
+  { id: 'cycle_count', name: 'Cycle Count Import', icon: '🔄', neonAppName: 'cycle-count' },
 ];
 
 // State
@@ -592,8 +592,8 @@ function getAppShortName(appName) {
     'schedule-app': 'Schedule',
     'todolist': 'Todo',
     'update-appt': 'Update Appt',
-    'cycle-count': 'Cycle',
-    'cycle_count': 'Cycle'
+    'cycle-count': 'Cycle Import',
+    'cycle_count': 'Cycle Import'
   };
   return mapping[appName] || appName;
 }

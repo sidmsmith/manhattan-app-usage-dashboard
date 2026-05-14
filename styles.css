@@ -545,3 +545,4 @@ body {
 .app-card[data-app="schedule_app"] { border-color: #3F51B5; }
 .app-card[data-app="todolist"] { border-color: #009688; }
 .app-card[data-app="update_appt"] { border-color: #FF5722; }
+.app-card[data-app="cycle_count"] { border-color: #8BC34A; }
