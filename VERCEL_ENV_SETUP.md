@@ -51,9 +51,30 @@ After setting the environment variable and deploying:
    https://your-app.vercel.app/api/fetch-neon?query=recent-events&limit=5
    ```
 
+## Usage ingest (`POST /api/usage-ingest`)
+
+Manhattan apps (for example `lpn-unlock-app`) can POST a single usage JSON object to this route on the **same** Vercel project as the dashboard. Only this project needs `NEON_DATABASE_URL`.
+
+**URL (example):** `https://<your-dashboard-host>/api/usage-ingest`
+
+### Optional shared secret
+
+1. In this **dashboard** project, add `MANHATTAN_USAGE_INGEST_SECRET` (any long random string).
+2. In each **caller** app, set the same value in `MANHATTAN_USAGE_INGEST_SECRET` and set `MANHATTAN_USAGE_INGEST_URL` to the full ingest URL above.
+
+If `MANHATTAN_USAGE_INGEST_SECRET` is **not** set on the dashboard, ingest accepts unauthenticated POSTs (not recommended for production).
+
+Callers must send either `Authorization: Bearer <secret>` or header `X-Usage-Ingest-Secret: <secret>` when the secret is configured.
+
 ## Security Reminder
 
 ⚠️ **Never commit this connection string to Git!** It contains sensitive credentials.
 
 The connection string is stored securely in Vercel's environment variables and is only accessible to your serverless functions at runtime.
+
+
+
+
+
+
 
