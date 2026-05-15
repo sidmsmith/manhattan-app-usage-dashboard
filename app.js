@@ -531,6 +531,59 @@ function formatLocalTime(utcTimestamp) {
   return { mmdd, time };
 }
 
+/** Parsed event_data (JSONB may arrive as object or string). */
+function getEventDataObject(event) {
+  const ed = event && event.event_data;
+  if (ed == null) return {};
+  if (typeof ed === 'string') {
+    try {
+      return JSON.parse(ed);
+    } catch {
+      return {};
+    }
+  }
+  return typeof ed === 'object' ? ed : {};
+}
+
+/**
+ * ORG for list/modal: DB column `org` first, then common metadata paths (e.g. Apps Homepage URL params).
+ */
+function resolveDisplayOrg(event) {
+  if (!event) return null;
+  if (event.org != null && String(event.org).trim() !== '') {
+    return String(event.org).trim();
+  }
+  const d = getEventDataObject(event);
+  if (d.org != null && String(d.org).trim() !== '') return String(d.org).trim();
+  if (d.Organization != null && String(d.Organization).trim() !== '') return String(d.Organization).trim();
+  const up = d.url_params;
+  if (up && typeof up === 'object') {
+    const o = up.Organization ?? up.ORG ?? up.organization;
+    if (o != null && String(o).trim() !== '') return String(o).trim();
+  }
+  return null;
+}
+
+/** Tile label for app link clicks (Apps Homepage and any app sending clicked_app_name). */
+function resolveClickedAppNameForDisplay(event) {
+  if (!event || event.event_name !== 'app_clicked') return null;
+  const d = getEventDataObject(event);
+  const name = d.clicked_app_name ?? d.clicked_app;
+  if (name != null && String(name).trim() !== '') return String(name).trim();
+  return null;
+}
+
+/** Trailing segment for event lines: ORG and/or clicked app, else N/A. */
+function formatEventOrgClickedTail(event) {
+  const org = resolveDisplayOrg(event);
+  const clicked = resolveClickedAppNameForDisplay(event);
+  const parts = [];
+  if (org) parts.push(escapeHtml(String(org)));
+  if (clicked) parts.push(escapeHtml(String(clicked)));
+  if (parts.length === 0) return 'N/A';
+  return parts.join(' · ');
+}
+
 // Create event item element (for header card - reversed format: App bold, then Event)
 function createEventItem(event) {
   const div = document.createElement('div');
@@ -550,10 +603,10 @@ function createEventItem(event) {
 
   const appShort = getAppShortName(event.app_name);
   const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  const org = event.org || 'N/A';
+  const tail = formatEventOrgClickedTail(event);
 
   // Header card format: App (bold) || Event
-  div.innerHTML = `• <strong>${appShort}</strong> — ${eventName} — ${mmdd} ${time} — ${org}`;
+  div.innerHTML = `• <strong>${appShort}</strong> — ${eventName} — ${mmdd} ${time} — ${tail}`;
   
   // Add click handler for modal (only if event.id exists)
   if (event.id) {
@@ -783,9 +836,9 @@ function createAppEventItem(event) {
   }
 
   const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  const org = event.org || 'N/A';
+  const tail = formatEventOrgClickedTail(event);
 
-  div.innerHTML = `• <strong>${eventName}</strong> — ${mmdd} ${time} — ${org}`;
+  div.innerHTML = `• <strong>${eventName}</strong> — ${mmdd} ${time} — ${tail}`;
   
   // Add click handler for modal (only if event.id exists)
   if (event.id) {
@@ -952,7 +1005,12 @@ function displayEventInModal(eventData) {
   html += `<div class="modal-event-info-item"><span class="modal-event-info-label">ID:</span> <span class="modal-event-info-value">${eventData.id || 'N/A'}</span></div>`;
   html += `<div class="modal-event-info-item"><span class="modal-event-info-label">App Name:</span> <span class="modal-event-info-value">${eventData.app_name || 'N/A'}</span></div>`;
   html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Event Name:</span> <span class="modal-event-info-value">${eventData.event_name || 'N/A'}</span></div>`;
-  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Organization:</span> <span class="modal-event-info-value">${eventData.org || 'N/A'}</span></div>`;
+  const orgResolved = resolveDisplayOrg(eventData) || 'N/A';
+  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Organization:</span> <span class="modal-event-info-value">${escapeHtml(orgResolved)}</span></div>`;
+  const clickedResolved = resolveClickedAppNameForDisplay(eventData);
+  if (clickedResolved) {
+    html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Clicked App:</span> <span class="modal-event-info-value">${escapeHtml(clickedResolved)}</span></div>`;
+  }
   html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Timestamp:</span> <span class="modal-event-info-value">${eventData.timestamp || 'N/A'}</span></div>`;
   if (eventData.created_at) {
     html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Created At:</span> <span class="modal-event-info-value">${eventData.created_at}</span></div>`;
