@@ -564,13 +564,43 @@ function resolveDisplayOrg(event) {
   return null;
 }
 
+/**
+ * When `clicked_app_name` is empty (e.g. legacy Apps Homepage: single-word titles were fully removed by a textContent regex),
+ * derive a short label from the tile URL hostname.
+ */
+function deriveClickedAppLabelFromAppUrl(appUrl) {
+  if (!appUrl || typeof appUrl !== 'string') return null;
+  try {
+    const u = new URL(appUrl);
+    let host = u.hostname.replace(/^www\./i, '');
+    if (!host) return null;
+    host = host
+      .replace(/\.vercel\.app$/i, '')
+      .replace(/\.netlify\.app$/i, '')
+      .replace(/\.github\.io$/i, '');
+    if (!host) return null;
+    const words = host.split(/[-_]+/).filter(Boolean);
+    if (words.length === 0) return null;
+    // Manhattan demo pattern: banding-wm -> "Banding"
+    if (words.length === 2 && words[1].toLowerCase() === 'wm') {
+      const w = words[0];
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    }
+    return words
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  } catch {
+    return null;
+  }
+}
+
 /** Tile label for app link clicks (Apps Homepage and any app sending clicked_app_name). */
 function resolveClickedAppNameForDisplay(event) {
   if (!event || event.event_name !== 'app_clicked') return null;
   const d = getEventDataObject(event);
-  const name = d.clicked_app_name ?? d.clicked_app;
-  if (name != null && String(name).trim() !== '') return String(name).trim();
-  return null;
+  const raw = d.clicked_app_name ?? d.clicked_app;
+  if (raw != null && String(raw).trim() !== '') return String(raw).trim();
+  return deriveClickedAppLabelFromAppUrl(d.app_url);
 }
 
 /** Trailing segment for event lines: ORG and/or clicked app, else N/A. */
