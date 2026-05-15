@@ -25,6 +25,17 @@ build/
 # Dependencies
 node_modules/
 
+.vercel
+
 # MariaDB configuration (contains passwords)
 manhattan_dashboard/.my.cnf
 config/.my.cnf
+
+# Python bytecode and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+ENV/
