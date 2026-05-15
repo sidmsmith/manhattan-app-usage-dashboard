@@ -1,4 +1,4 @@
-# Manhattan App Usage Dashboard v2.4.6
+# Manhattan App Usage Dashboard v2.4.7
 
 A standalone web dashboard for monitoring Manhattan Associates application usage from Neon PostgreSQL (and optional legacy Home Assistant SQL sensors).
 
@@ -26,6 +26,10 @@ This dashboard shows aggregate statistics, recent events, and per-app metrics. P
 | Import Forecast | `Import Forecast` | `app_opened`, `auth_*`, `forecast_file_loaded`, `location_file_loaded`, `file_load_failed`, `upload_forecast_*`, `upload_locations_*` |
 | SCP Store | `scp-store` | `app_opened`, `auth_*`, `store_id_entered`, `card_clicked`; optional legacy `forecast_*` / `upload_*` if that code path is used |
 | Banding | `banding` | `app_opened`, `auth_*`, `banding_search_orders_*`, `banding_order_selected`, `banding_order_detail_*`, `banding_add_to_bundle_*`, `banding_remove_from_bundle_*`, `banding_back_to_order_list`, `banding_sort_changed`, `banding_theme_changed`, `banding_console_toggled` |
+| POS Items | `pos-items-app` | `app_opened`, `auth_*` (generation / import / gallery events per UI) |
+| Item Master Update | `item-update` | `app_opened`, `auth_*`, `item_scanned` |
+| Todo List | `todolist` | `app_opened`, `auth_*` (todo CRUD per frontend) |
+| Check In Kiosk | `appt-app` | `app_opened`, `auth_*`, appointment search / check-in flow events |
 
 Other apps follow the same pattern; see the `APPS` comment block at the top of `app.js`.
 

@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.4.6';
+const DASHBOARD_VERSION = '2.4.7';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -44,11 +44,15 @@ if (typeof window.CONFIG === 'undefined') {
 // - Import Forecast: app_opened; auth_*; forecast_file_loaded; location_file_loaded; file_load_failed;
 //   upload_forecast_*; upload_locations_* (server may emit upload_*_failed)
 // - scp-store: app_opened; auth_*; store_id_entered; card_clicked; (legacy forecast/location upload events if that UI path runs)
+// - pos-items-app: app_opened; auth_*; (item generation / bulk import / gallery events per UI)
+// - item-update: app_opened; auth_*; item_scanned
+// - todolist: app_opened; auth_*; (todo CRUD events per frontend)
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
   { id: 'appt_app', name: 'Check In Kiosk', icon: '📅', neonAppName: 'appt-app' }, // check_in app sends app_name appt-app
-  { id: 'pos_items', name: 'POS Items', icon: '📦', neonAppName: 'POS Items' },
+  { id: 'pos_items', name: 'POS Items', icon: '📦', neonAppName: 'pos-items-app' },
+  { id: 'item_update', name: 'Item Master Update', icon: '✏️', neonAppName: 'item-update' },
   { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚', neonAppName: 'driver-pickup' },
   { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍', neonAppName: 'facility-addresses' },
   { id: 'forecast_import', name: 'Import Forecast', icon: '📊', neonAppName: 'Import Forecast' },
@@ -678,6 +682,9 @@ function getAppShortName(appName) {
     'appt_app': 'APPT',
     'check-in': 'APPT',
     'POS Items': 'POS',
+    'pos-items-app': 'POS',
+    'item-update': 'Item Upd',
+    'item_update': 'Item Upd',
     'driver-pickup': 'Driver',
     'driver_pickup': 'Driver',
     'Driver Pickup': 'Driver',
