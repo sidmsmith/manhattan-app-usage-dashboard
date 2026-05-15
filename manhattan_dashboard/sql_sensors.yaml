@@ -332,7 +332,7 @@
 
 
 #########################################################
-# FORECAST IMPORT (Import Forecast)
+# FORECAST IMPORT (app_name: forecast-import; legacy HA: Import Forecast)
 #########################################################
 
 - db_url: sqlite:////config/home-assistant_v2.db
@@ -340,7 +340,7 @@
   query: >
     SELECT COUNT(*) AS count
     FROM event_data
-    WHERE json_extract(shared_data, '$.app_name') = 'Import Forecast';
+    WHERE json_extract(shared_data, '$.app_name') IN ('forecast-import', 'Import Forecast');
   column: count
 
 - db_url: sqlite:////config/home-assistant_v2.db
@@ -348,7 +348,7 @@
   query: >
     SELECT COUNT(*) AS count
     FROM event_data
-    WHERE json_extract(shared_data, '$.app_name') = 'Import Forecast'
+    WHERE json_extract(shared_data, '$.app_name') IN ('forecast-import', 'Import Forecast')
       AND DATETIME(json_extract(shared_data, '$.timestamp')) > DATETIME('now','-1 day');
   column: count
 
@@ -357,7 +357,7 @@
   query: >
     SELECT COUNT(*) AS count
     FROM event_data
-    WHERE json_extract(shared_data, '$.app_name') = 'Import Forecast'
+    WHERE json_extract(shared_data, '$.app_name') IN ('forecast-import', 'Import Forecast')
       AND json_extract(shared_data, '$.event_name') = 'app_opened';
   column: count
 
@@ -379,7 +379,7 @@
         json_extract(shared_data, '$.org') AS org,
         json_extract(shared_data, '$.app_name') AS app_name
       FROM event_data
-      WHERE json_extract(shared_data, '$.app_name') = 'Import Forecast'
+      WHERE json_extract(shared_data, '$.app_name') IN ('forecast-import', 'Import Forecast')
       ORDER BY timestamp DESC
       LIMIT 15
     );
@@ -737,6 +737,12 @@
       LIMIT 15
     );
   column: events
+
+
+
+
+
+
 
 
 

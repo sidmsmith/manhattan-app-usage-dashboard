@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.4.7';
+const DASHBOARD_VERSION = '2.4.8';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -41,7 +41,7 @@ if (typeof window.CONFIG === 'undefined') {
 // - banding: app_opened; auth_*; banding_search_orders_*; banding_order_selected; banding_order_detail_*;
 //   banding_add_to_bundle_*; banding_remove_from_bundle_*; banding_back_to_order_list; banding_sort_changed;
 //   banding_theme_changed; banding_console_toggled
-// - Import Forecast: app_opened; auth_*; forecast_file_loaded; location_file_loaded; file_load_failed;
+// - forecast-import: app_opened; auth_*; forecast_file_loaded; location_file_loaded; file_load_failed;
 //   upload_forecast_*; upload_locations_* (server may emit upload_*_failed)
 // - scp-store: app_opened; auth_*; store_id_entered; card_clicked; (legacy forecast/location upload events if that UI path runs)
 // - pos-items-app: app_opened; auth_*; (item generation / bulk import / gallery events per UI)
@@ -55,7 +55,7 @@ const APPS = [
   { id: 'item_update', name: 'Item Master Update', icon: '✏️', neonAppName: 'item-update' },
   { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚', neonAppName: 'driver-pickup' },
   { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍', neonAppName: 'facility-addresses' },
-  { id: 'forecast_import', name: 'Import Forecast', icon: '📊', neonAppName: 'Import Forecast' },
+  { id: 'forecast_import', name: 'Import Forecast', icon: '📊', neonAppName: 'forecast-import' },
   { id: 'scp_store', name: 'SCP Store', icon: '🏪', neonAppName: 'scp-store' },
   { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠', neonAppName: 'apps-homepage' },
   { id: 'item_generator_gallery', name: 'Item Generator', icon: '🖼️', neonAppName: 'item-generator-gallery' },
@@ -691,6 +691,8 @@ function getAppShortName(appName) {
     'facility-addresses': 'Facility',
     'facility_addresses': 'Facility',
     'Facility Addresses': 'Facility',
+    'forecast-import': 'Forecast',
+    'forecast_import': 'Forecast',
     'Import Forecast': 'Forecast',
     'scp-store': 'SCP Store',
     'scp_store': 'SCP Store',
