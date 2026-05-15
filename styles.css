@@ -548,3 +548,4 @@ body {
 .app-card[data-app="cycle_count"] { border-color: #8BC34A; }
 .app-card[data-app="proofofdelivery"] { border-color: #673AB7; }
 .app-card[data-app="work_order_update"] { border-color: #00ACC1; }
+.app-card[data-app="banding"] { border-color: #5C6BC0; }

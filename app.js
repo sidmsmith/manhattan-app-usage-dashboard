@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.4.4';
+const DASHBOARD_VERSION = '2.4.5';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -38,6 +38,9 @@ if (typeof window.CONFIG === 'undefined') {
 // - proofofdelivery: app_opened; auth_*; barcode_validation_*; barcode_scanned; barcode_scan_invalid;
 //   pickup_*; (delivery flow: search_olpns, deliver_olpn, condition codes, upload_pod_photo — track as needed later)
 // - work-order-update: app_opened; auth_*; work_order_search_*; work_order_descriptions_*
+// - banding: app_opened; auth_*; banding_search_orders_*; banding_order_selected; banding_order_detail_*;
+//   banding_add_to_bundle_*; banding_remove_from_bundle_*; banding_back_to_order_list; banding_sort_changed;
+//   banding_theme_changed; banding_console_toggled
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
@@ -55,6 +58,7 @@ const APPS = [
   { id: 'cycle_count', name: 'Cycle Count Import', icon: '🔄', neonAppName: 'cycle-count' },
   { id: 'proofofdelivery', name: 'Proof of Delivery', icon: '📬', neonAppName: 'proofofdelivery' },
   { id: 'work_order_update', name: 'Work Order Update', icon: '🔧', neonAppName: 'work-order-update' },
+  { id: 'banding', name: 'Banding', icon: '📎', neonAppName: 'banding' },
 ];
 
 // State
@@ -603,6 +607,8 @@ function getAppShortName(appName) {
     'proofofdelivery': 'POD',
     'proof-of-delivery': 'POD',
     'work-order-update': 'WO Update',
+    'banding': 'Banding',
+    'banding-wm': 'Banding',
     'schedule-app': 'Schedule',
     'todolist': 'Todo',
     'update-appt': 'Update Appt',
