@@ -26,8 +26,8 @@ Historical Home Assistant / SQL sensor material may still exist under `manhattan
 | Import Forecast | `forecast-import` | `app_opened`, `auth_*`, `forecast_file_loaded`, `location_file_loaded`, `file_load_failed`, `upload_forecast_*`, `upload_locations_*` |
 | SCP Store | `scp-store` | `app_opened`, `auth_*`, `store_id_entered`, `card_clicked`; optional legacy `forecast_*` / `upload_*` if that code path is used |
 | Banding | `banding` | `app_opened`, `auth_*`, `banding_search_orders_*`, `banding_order_selected`, `banding_order_detail_*`, `banding_add_to_bundle_*`, `banding_remove_from_bundle_*`, `banding_back_to_order_list`, `banding_sort_changed`, `banding_theme_changed`, `banding_console_toggled` |
-| Dispatch | `dispatch` | `dispatch_app_opened`, `dispatch_auth`, `dispatch_search_trips`, `dispatch_assign_trip` |
-| Manual Dispatch Request | `dispatch-request` | `dispatch_request_app_opened`, `dispatch_request_auth`, `dispatch_request_submit` |
+| Dispatch | `dispatch` | `app_opened`, `auth_attempt`, `auth_success`, `auth_failed`, `dispatch_search_trips`, `dispatch_assign_trip` |
+| Manual Dispatch Request | `dispatch-request` | `app_opened`, `auth_attempt`, `auth_success`, `auth_failed`, `dispatch_request_submit` |
 | POS Items | `pos-items-app` | `app_opened`, `auth_*` (generation / import / gallery events per UI) |
 | Item Master Update | `item-update` | `app_opened`, `auth_*`, `item_scanned` |
 | Todo List | `todolist` | `app_opened`, `auth_*` (todo CRUD per frontend) |

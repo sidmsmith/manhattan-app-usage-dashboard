@@ -33,8 +33,8 @@ if (typeof window.CONFIG === 'undefined') {
 // - pos-items-app: app_opened; auth_*; (item generation / bulk import / gallery events per UI)
 // - item-update: app_opened; auth_*; item_scanned
 // - todolist: app_opened; auth_*; (todo CRUD events per frontend)
-// - dispatch: dispatch_app_opened; dispatch_auth; dispatch_search_trips; dispatch_assign_trip
-// - dispatch-request: dispatch_request_app_opened; dispatch_request_auth; dispatch_request_submit
+// - dispatch: app_opened; auth_attempt; auth_success; auth_failed; dispatch_search_trips; dispatch_assign_trip
+// - dispatch-request: app_opened; auth_attempt; auth_success; auth_failed; dispatch_request_submit
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
