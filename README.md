@@ -1,16 +1,16 @@
-# Manhattan App Usage Dashboard v2.4.8
+# Manhattan App Usage Dashboard v2.5.0
 
-A standalone web dashboard for monitoring Manhattan Associates application usage from Neon PostgreSQL (and optional legacy Home Assistant SQL sensors).
+A standalone web dashboard for monitoring Manhattan Associates application usage from **Neon PostgreSQL** only (via the dashboard `usage-ingest` API and `fetch-neon` serverless routes).
 
 ## Overview
 
-This dashboard shows aggregate statistics, recent events, and per-app metrics. Primary data is stored in **Neon** via each app’s `MANHATTAN_USAGE_INGEST_URL` posting to the dashboard **usage-ingest** API.
+This dashboard shows aggregate statistics, recent events, and per-app metrics. Data is stored in **Neon** when each app posts to `MANHATTAN_USAGE_INGEST_URL` (the dashboard **usage-ingest** API).
 
 **Repository**: https://github.com/sidmsmith/manhattan-app-usage-dashboard.git  
 **Deployment**: Vercel (serverless functions)  
-**Data Sources**:
-- **Neon PostgreSQL** — primary store; apps POST to the dashboard `usage-ingest` API (`MANHATTAN_USAGE_INGEST_URL` on each app).
-- **Optional:** Home Assistant SQL sensors — legacy summary fallback if Neon is unavailable.
+**Data source**: **Neon PostgreSQL** — see [`VERCEL_ENV_SETUP.md`](./VERCEL_ENV_SETUP.md) for `NEON_DATABASE_URL` and related settings.
+
+Historical Home Assistant / SQL sensor material may still exist under `manhattan_dashboard/` for documentation or migration only; **the deployed UI no longer reads Home Assistant.**
 
 ### Tracked apps: canonical `app_name` and events
 
@@ -26,6 +26,8 @@ This dashboard shows aggregate statistics, recent events, and per-app metrics. P
 | Import Forecast | `forecast-import` | `app_opened`, `auth_*`, `forecast_file_loaded`, `location_file_loaded`, `file_load_failed`, `upload_forecast_*`, `upload_locations_*` |
 | SCP Store | `scp-store` | `app_opened`, `auth_*`, `store_id_entered`, `card_clicked`; optional legacy `forecast_*` / `upload_*` if that code path is used |
 | Banding | `banding` | `app_opened`, `auth_*`, `banding_search_orders_*`, `banding_order_selected`, `banding_order_detail_*`, `banding_add_to_bundle_*`, `banding_remove_from_bundle_*`, `banding_back_to_order_list`, `banding_sort_changed`, `banding_theme_changed`, `banding_console_toggled` |
+| Dispatch | `dispatch` | `dispatch_app_opened`, `dispatch_auth`, `dispatch_search_trips`, `dispatch_assign_trip` |
+| Manual Dispatch Request | `dispatch-request` | `dispatch_request_app_opened`, `dispatch_request_auth`, `dispatch_request_submit` |
 | POS Items | `pos-items-app` | `app_opened`, `auth_*` (generation / import / gallery events per UI) |
 | Item Master Update | `item-update` | `app_opened`, `auth_*`, `item_scanned` |
 | Todo List | `todolist` | `app_opened`, `auth_*` (todo CRUD per frontend) |
@@ -34,8 +36,6 @@ This dashboard shows aggregate statistics, recent events, and per-app metrics. P
 Other apps follow the same pattern; see the `APPS` comment block at the top of `app.js`.
 
 ## Architecture
-
-### Current Architecture (Neon PostgreSQL Integration)
 
 ```
 ┌──────────────────┐     MANHATTAN_USAGE_INGEST_URL      ┌─────────────────────┐
@@ -47,14 +47,10 @@ Other apps follow the same pattern; see the `APPS` comment block at the top of `
                                                           │ Dashboard (UI)   │
                                                           │ fetch-neon API   │
                                                           └──────────────────┘
-
-Optional legacy path: apps → Home Assistant webhook → SQL sensors (summary only).
 ```
 
-**Current Architecture:**
-- **Neon PostgreSQL:** Primary database for the dashboard UI (full `event_data` JSONB).
+- **Neon PostgreSQL:** Database for the dashboard UI (full `event_data` JSONB).
 - **Usage ingest:** Each app forwards events server-side so `app_name` / `app_version` stay canonical.
-- **Optional SQL sensors (Home Assistant):** Summary fallback if Neon queries fail.
 
 ## Features
 
@@ -92,157 +88,55 @@ Optional legacy path: apps → Home Assistant webhook → SQL sensors (summary o
 
 ### Prerequisites
 
-1. **Home Assistant Instance** (running and accessible)
-2. **GitHub Account** (for repository)
-3. **Vercel Account** (for deployment)
-4. **Long-Lived Access Token** from Home Assistant
+1. **GitHub Account** (for the repository)
+2. **Vercel Account** (for deployment)
+3. **Neon PostgreSQL** project and connection string (**required** — see [`VERCEL_ENV_SETUP.md`](./VERCEL_ENV_SETUP.md) and [`NEON_SETUP.md`](./NEON_SETUP.md))
 
-### Step 1: Home Assistant Configuration
+### Environment variables (Vercel)
 
-**IMPORTANT**: Before the dashboard can work, you must configure Home Assistant. See the detailed guide in [`manhattan_dashboard/README.md`](./manhattan_dashboard/README.md) for:
+Configure at least:
 
-- Setting up the webhook automation
-- Installing SQL and template sensors
-- Configuring the Python script
-- Setting up `configuration.yaml` includes
+- `NEON_DATABASE_URL` — read access for `api/fetch-neon.js`
 
-**Quick Checklist:**
-- [ ] Copy `manhattan_dashboard/` files to `/config/manhattan_dashboard/` in HA
-- [ ] Create symlink for `store_event.py` to `python_scripts/`
-- [ ] Add includes to `configuration.yaml`
-- [ ] Create automation for webhook `manhattan_app_usage`
-- [ ] Restart Home Assistant
-- [ ] Verify sensors are created (check Developer Tools > States)
+Set on **each Manhattan app** that records usage:
 
-### Step 1.5: Neon PostgreSQL Integration (Required for Full Event Data)
+- `MANHATTAN_USAGE_INGEST_URL` — URL of this dashboard’s `usage-ingest` endpoint
+- Optional: `MANHATTAN_USAGE_INGEST_SECRET` if your ingest checks `Authorization`
 
-**See [`VERCEL_ENV_SETUP.md`](./VERCEL_ENV_SETUP.md) for the exact connection string to use in Vercel.**
-
-**For full event data access (no 255-char limit):**
-
-1. **Create Neon PostgreSQL Database** (cloud-based, free tier available)
-   - Sign up at https://neon.tech
-   - Create a new project
-   - Note your connection string (pooler endpoint recommended)
-
-2. **Create Database Schema** in Neon
-   - Use the same schema as MariaDB (see [`manhattan_dashboard/mariadb_create_table.sql`](./manhattan_dashboard/mariadb_create_table.sql))
-   - Adapt SQL syntax for PostgreSQL (JSON → JSONB, etc.)
-
-3. **Install AppDaemon Add-on** in Home Assistant
-   - Required for writing events to Neon
-   - See [`manhattan_dashboard/appdaemon/README.md`](./manhattan_dashboard/appdaemon/README.md) for setup
-
-4. **Configure AppDaemon** with Neon credentials
-   - Update `custom_event_logger.py` with Neon connection details
-   - Add `psycopg2-binary` to AppDaemon's `python_packages`
-
-5. **Deploy AppDaemon Files** to HA
-   - Copy files from Git structure to HA's required locations
-   - See [`manhattan_dashboard/appdaemon/README.md`](./manhattan_dashboard/appdaemon/README.md) deployment guide
-
-**Benefits:**
-- Full event JSON data (no truncation)
-- Cloud-based (accessible from Vercel without tunnels)
-- Better performance for serverless functions
-- Automatic backups and scaling
-
-**Note:** The dashboard will work without Neon, but will use SQL sensors with limited data. Neon integration is recommended for full functionality.
-
-### Step 2: Home Assistant Connectivity
-
-See [HA_CONNECTIVITY_SETUP.md](./HA_CONNECTIVITY_SETUP.md) for detailed instructions on:
-- Creating a Long-Lived Access Token
-- Configuring API access
-- Setting up environment variables
-- Testing API connectivity
-
-### Step 3: Environment Variables
-
-#### Local Development
-
-For local testing, you can create a `config.js` file (not committed to git):
-
-```javascript
-window.CONFIG = {
-  HA_URL: 'http://homeassistant.local:8123',
-  HA_TOKEN: 'your_long_lived_access_token_here'
-};
-```
-
-**Note**: `config.js` is in `.gitignore` and won't be committed to git.
-
-#### Vercel Deployment
-
-The dashboard uses a serverless function (`api/fetch-sensor.js`) to securely fetch data from Home Assistant. Add these as environment variables in your Vercel project settings:
-
-- `HA_URL`: Your Home Assistant URL (e.g., `https://your-ha-instance.duckdns.org` or your public URL)
-- `HA_TOKEN`: Your Long-Lived Access Token
-
-The serverless function keeps your token server-side and handles CORS automatically.
-
-**To set environment variables in Vercel:**
-1. Go to your project in Vercel dashboard
-2. Navigate to **Settings** > **Environment Variables**
-3. Add `HA_URL` and `HA_TOKEN`
-4. Redeploy the application
-
-### Step 4: Local Development
+### Local development
 
 ```bash
-# Navigate to the project directory
 cd apps_dashboard
-
-# Using a simple HTTP server (Python)
 python -m http.server 8000
-
-# Or using Node.js http-server
-npx http-server
-
-# Or using Vite (if you want hot reload)
-npm install -g vite
-vite
 ```
 
-Then open `http://localhost:8000` (or the port your server uses).
+Open `http://localhost:8000`. Static assets work with a simple file server; **Neon-backed APIs** (`/api/fetch-neon`, `/api/usage-ingest`) need `vercel dev` or a deployed environment with `NEON_DATABASE_URL` set.
 
-**Note**: For local development, you'll need to either:
-- Use `config.js` with your local HA URL
-- Or set up CORS in Home Assistant to allow `http://localhost:8000`
+Optional: add a `config.js` (gitignored) if you add local-only client settings later; the dashboard no longer uses Home Assistant client config.
 
-### Step 5: Deploy to Vercel
+### Deploy to Vercel
 
-1. **Push code to GitHub**: Ensure your code is in `https://github.com/sidmsmith/manhattan-app-usage-dashboard.git`
-2. **Import repository in Vercel**:
-   - Go to Vercel dashboard
-   - Click "Add New Project"
-   - Import from GitHub
-   - Select `manhattan-app-usage-dashboard`
-3. **Add environment variables** (see Step 3 above)
-4. **Deploy**: Vercel will automatically deploy on every push to `main`
+1. Push this repository to GitHub.
+2. Import the project in Vercel and set `NEON_DATABASE_URL` (and any ingest secrets).
+3. Redeploy after variable changes.
 
 ## Configuration
 
-### App List
+### App list
 
-Apps are defined in `app.js` in the `APPS` array. Each app has:
-- `id`: The sensor prefix (e.g., `lpn_unlock_app` matches `sensor.lpn_unlock_app_total_events`)
-- `name`: Display name shown in the dashboard
-- `icon`: Emoji icon for the app card
+Apps are defined in `app.js` in the `APPS` array. Each entry includes:
 
-To add or modify apps:
+- `id`: Stable key used for card `data-app`, ordering, and styling
+- `name`: Display title
+- `icon`: Emoji for the card
+- `neonAppName`: Canonical `app_name` stored in Neon (must match ingest payloads)
 
 ```javascript
 const APPS = [
-  { id: 'lpn_unlock_app', name: 'LPN Unlock App', icon: '🔓' },
-  { id: 'mhe_console', name: 'MHE Console', icon: '💻' },
-  // Add more apps here...
+  { id: 'banding', name: 'Banding', icon: '📎', neonAppName: 'banding' },
+  // …
 ];
 ```
-
-**Important**: The `id` must match the sensor naming convention in Home Assistant:
-- Sensor names: `sensor.{id}_total_events`, `sensor.{id}_events_last_24h`, etc.
-- The SQL sensors in `manhattan_dashboard/sql_sensors.yaml` use `app_name` from the database, which should match your app's internal identifier
 
 ### Refresh Interval
 
@@ -270,110 +164,53 @@ const DASHBOARD_VERSION = '1.0.0';
 <h2>📊 Overall Summary <span class="version-badge">v2.0.0</span></h2>
 ```
 
-## Home Assistant Configuration
+## Legacy Home Assistant material
 
-All Home Assistant configuration files are stored in the `manhattan_dashboard/` folder:
+Older webhook / SQL sensor / AppDaemon docs and YAML under `manhattan_dashboard/` remain for archival or migration. **They are not used by the Neon-only dashboard.**
 
-- **`templates.yaml`** - Template sensors for aggregated totals across all apps
-- **`sql_sensors.yaml`** - SQL sensors for querying app usage events from HA database
-- **`store_event.py`** - Python script for processing webhook events
-- **`README.md`** - Detailed HA configuration documentation
-
-**See [`manhattan_dashboard/README.md`](./manhattan_dashboard/README.md) for complete Home Assistant setup instructions.**
-
-### Quick Overview
-
-1. **Webhook** → Apps send events to `/api/webhook/manhattan_app_usage`
-2. **Automation** → Triggers on webhook, calls `python_script.store_event`
-3. **Python Script** → Fires HA event `app_usage_event` with event data
-4. **HA Database** → Automatically stores events in `events` and `event_data` tables
-5. **SQL Sensors** → Query database to aggregate and format data (run every 60 seconds)
-6. **Template Sensors** → Aggregate totals across all apps
-7. **Dashboard** → Reads sensors via HA API and displays data
-
-## File Structure
+## File structure
 
 ```
 apps_dashboard/
 ├── api/
-│   └── fetch-sensor.js          # Vercel serverless function (fetches HA sensor data)
-├── manhattan_dashboard/         # Home Assistant configuration files
-│   ├── templates.yaml           # Template sensors
-│   ├── sql_sensors.yaml         # SQL sensors
-│   ├── store_event.py           # Python script
-│   └── README.md                # HA setup guide
-├── index.html                   # Main HTML file
-├── app.js                       # Dashboard JavaScript logic
-├── styles.css                   # Dashboard styling
-├── vercel.json                  # Vercel configuration
-├── package.json                 # Node.js dependencies
-├── README.md                    # This file
-├── HA_CONNECTIVITY_SETUP.md     # HA API setup guide
-└── .gitignore                   # Git ignore rules
+│   ├── fetch-neon.js       # Queries Neon for statistics and recent events
+│   └── usage-ingest.js     # Receives events from Manhattan apps → Neon
+├── manhattan_dashboard/    # Historical HA / MariaDB helpers (optional)
+├── index.html
+├── app.js
+├── styles.css
+├── vercel.json
+├── package.json
+├── README.md
+└── .gitignore
 ```
 
-## API Endpoints
+## API (Neon paths)
 
-The dashboard fetches data from Home Assistant using these sensors:
+The browser loads data via `/api/fetch-neon`:
 
-### Overall Summary Sensors:
-- `sensor.all_apps_total_events` - Total events across all apps
-- `sensor.all_apps_events_last_24h` - Events in last 24 hours
-- `sensor.all_apps_total_opens` - Total app opens
-- `sensor.all_apps_recent_events` - Recent events (attributes.events contains JSON array)
+- Query `statistics` — overall or per-app counters
+- Query `recent-events` — chronological events with Neon `id` for the detail modal
 
-### Per-App Sensors (for each app in APPS array):
-- `sensor.{app_id}_total_events` - Total events for this app
-- `sensor.{app_id}_events_last_24h` - Events in last 24 hours
-- `sensor.{app_id}_total_opens` - Total opens for this app
-- `sensor.{app_id}_recent_events` - Recent events (attributes.events contains JSON array)
-
-**Note**: Recent events sensors store data in `attributes.events` (not `state`) to avoid HA's 255-character state limit.
+The dashboard does **not** call Home Assistant or `fetch-sensor`.
 
 ## Troubleshooting
 
-### Dashboard shows "Loading..." or no data
+### Metrics show zeros or Recent Events are empty
 
-1. **Check browser console** (F12) for errors
-2. **Verify environment variables** in Vercel are set correctly
-3. **Test HA API access**:
-   ```bash
-   curl -X GET "https://your-ha-url/api/states/sensor.all_apps_total_events" \
-     -H "Authorization: Bearer YOUR_TOKEN"
-   ```
-4. **Verify sensors exist** in Home Assistant (Developer Tools > States)
-5. **Check Vercel function logs** for errors
+1. Confirm `NEON_DATABASE_URL` in Vercel and redeploy if it changed.
+2. Confirm apps have `MANHATTAN_USAGE_INGEST_URL` set and events appear in Neon.
+3. Check the browser Network tab for `/api/fetch-neon` responses and Vercel function logs.
 
-### Recent Events not showing
+### Event modal says missing id
 
-1. **Check sensor attributes**: Recent events are in `attributes.events`, not `state`
-2. **Verify SQL sensors are working**: Check HA logs for SQL errors
-3. **Check database**: Ensure events are being stored (check `event_data` table)
-4. **Verify webhook is firing**: Check HA automation logs
+Only rows authored through Neon ingest include stable `id` values needed for `/api/event-detail`; older mirrored rows without `id` are display-only.
 
-### CORS Errors
-
-If testing locally, add to Home Assistant `configuration.yaml`:
-
-```yaml
-http:
-  cors_allowed_origins:
-    - http://localhost:8000
-    - http://localhost:3000
-    - https://your-vercel-app.vercel.app
-```
-
-Then restart Home Assistant.
-
-### Authentication Errors
-
-- **401 Unauthorized**: Check your `HA_TOKEN` is correct and not expired
-- **403 Forbidden**: Verify token has proper permissions
-- **Token expired**: Create a new Long-Lived Access Token
 
 ## Version History
 
-- **v2.1.0** (Current) - "Modal Works" - Complete modal functionality with context-aware navigation
+- **v2.5.0** — Neon-only dashboard (`fetch-sensor` removed); added Dispatch apps to roster; HA fallbacks removed from `app.js`.
+- **v2.1.0** — "Modal Works" - Complete modal functionality with context-aware navigation
 - **v2.0.0** - "Fully works with Neon before Modal" - Neon PostgreSQL integration, performance optimizations
 - **v1.0.0** - Baseline version with organized HA configuration
   - All HA config files moved to `manhattan_dashboard/` folder
@@ -395,35 +232,16 @@ Then restart Home Assistant.
 
 ## Development
 
-### Adding a New App
+### Adding a new app
 
-1. **Add to `app.js` APPS array**:
-   ```javascript
-   { id: 'new_app', name: 'New App', icon: '🆕' }
-   ```
+1. Add `{ id, name, icon, neonAppName }` to the `APPS` array in `app.js`.
+2. Ensure the app POSTs usage to the ingest URL with `app_name` equal to `neonAppName`.
+3. Optionally extend `getAppShortName()` for nicer labels in the Recent Events strip.
+4. Add a `[data-app="…"]` border rule in `styles.css` if you want a distinct card color.
 
-2. **Add SQL sensors** in `manhattan_dashboard/sql_sensors.yaml`:
-   - Total Events sensor
-   - Events Last 24h sensor
-   - Total Opens sensor
-   - Recent Events sensor
+### Modifying Neon queries
 
-3. **Update template sensors** in `manhattan_dashboard/templates.yaml`:
-   - Add the new app's sensors to the aggregation formulas
-
-4. **Restart Home Assistant** to load new sensors
-
-5. **Test**: Verify sensors appear in HA and dashboard displays the new app
-
-### Modifying Sensor Queries
-
-SQL sensors are in `manhattan_dashboard/sql_sensors.yaml`. Each app has 4 sensors:
-- Total Events: `COUNT(*)` query
-- Events Last 24h: `COUNT(*)` with time filter
-- Total Opens: `COUNT(*)` where `event_name = 'app_opened'`
-- Recent Events: `json_group_array` with last 15 events
-
-See the file for examples and modify as needed.
+Server-side query shapes live in `api/fetch-neon.js`; update there if you change table or column names.
 
 ## License
 

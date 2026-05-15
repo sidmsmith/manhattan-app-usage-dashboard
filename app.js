@@ -1,29 +1,15 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.4.8';
+const DASHBOARD_VERSION = '2.5.0';
 
-// Configuration
-// For Vercel: environment variables are available via process.env
-// For local dev: create a config.js file (not committed to git)
+// Optional config.js loads before this script if present (local overrides).
 const CONFIG = {
-  haUrl: window.CONFIG?.HA_URL || '',
-  haToken: window.CONFIG?.HA_TOKEN || '',
-  refreshInterval: 60000, // 60 seconds
-  useNeon: window.CONFIG?.USE_NEON !== false, // Default to true if not specified
+  refreshInterval: 60000,
 };
 
-// Load config from external file if it exists (for local development)
-// This file should be in .gitignore
 if (typeof window.CONFIG === 'undefined') {
   const script = document.createElement('script');
   script.src = 'config.js';
-  script.onerror = () => {
-    console.warn('config.js not found. Using environment variables or defaults.');
-    // Try to get from meta tags as fallback
-    const metaUrl = document.querySelector('meta[name="ha-url"]');
-    const metaToken = document.querySelector('meta[name="ha-token"]');
-    if (metaUrl) CONFIG.haUrl = metaUrl.content;
-    if (metaToken) CONFIG.haToken = metaToken.content;
-  };
+  script.onerror = () => {};
   document.head.appendChild(script);
 }
 
@@ -47,6 +33,8 @@ if (typeof window.CONFIG === 'undefined') {
 // - pos-items-app: app_opened; auth_*; (item generation / bulk import / gallery events per UI)
 // - item-update: app_opened; auth_*; item_scanned
 // - todolist: app_opened; auth_*; (todo CRUD events per frontend)
+// - dispatch: dispatch_app_opened; dispatch_auth; dispatch_search_trips; dispatch_assign_trip
+// - dispatch-request: dispatch_request_app_opened; dispatch_request_auth; dispatch_request_submit
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
@@ -67,6 +55,8 @@ const APPS = [
   { id: 'proofofdelivery', name: 'Proof of Delivery', icon: '📬', neonAppName: 'proofofdelivery' },
   { id: 'work_order_update', name: 'Work Order Update', icon: '🔧', neonAppName: 'work-order-update' },
   { id: 'banding', name: 'Banding', icon: '📎', neonAppName: 'banding' },
+  { id: 'dispatch', name: 'Dispatch', icon: '🛣️', neonAppName: 'dispatch' },
+  { id: 'dispatch_request', name: 'Dispatch Request', icon: '📮', neonAppName: 'dispatch-request' },
 ];
 
 // State
@@ -192,10 +182,6 @@ function setupEventListeners() {
 // The serverless function connects directly to Neon PostgreSQL
 // Uses client-side caching (30 second TTL) to reduce API calls
 async function fetchNeonData(query, params = {}) {
-  if (!CONFIG.useNeon) {
-    return null;
-  }
-
   // Create cache key from query and params
   const cacheKey = `neon:${query}:${JSON.stringify(params)}`;
   
@@ -221,13 +207,12 @@ async function fetchNeonData(query, params = {}) {
     
     return data;
   } catch (error) {
-    // Neon fetch failed, falling back to SQL sensors (error logged silently)
-    return null; // Return null on error, allowing fallback to SQL sensors
+    return null;
   }
 }
 
 /**
- * Summary counters from Neon (same DB as recent events). Shape matches HA sensor { state }.
+ * Summary counters from Neon (same DB as recent events).
  * @param {string | null} appName - null = all apps aggregate
  */
 async function fetchSummaryStatsFromNeon(appName = null) {
@@ -241,39 +226,6 @@ async function fetchSummaryStatsFromNeon(appName = null) {
     events24h: { state: String(stats.events_last_24h) },
     totalOpens: { state: String(stats.total_opens) },
   };
-}
-
-// Fetch data from Home Assistant API
-async function fetchSensorData(entityId) {
-  try {
-    let url;
-    let options = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
-    // If we have direct HA config (local dev), use it directly
-    if (CONFIG.haUrl && CONFIG.haToken) {
-      url = `${CONFIG.haUrl}/api/states/${entityId}`;
-      options.headers['Authorization'] = `Bearer ${CONFIG.haToken}`;
-    } else {
-      // Otherwise, use Vercel serverless function (production)
-      url = `/api/fetch-sensor?entityId=${encodeURIComponent(entityId)}`;
-    }
-
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error(`Error fetching ${entityId}:`, error);
-    return null;
-  }
 }
 
 // Load all dashboard data
@@ -301,7 +253,7 @@ async function loadDashboardData(forceRefresh = false) {
 
 // Load overall summary data
 async function loadOverallSummary() {
-  // Summary stats: Neon first (matches recent events), then HA SQL sensors
+  const zero = { state: '0' };
   let totalEvents;
   let events24h;
   let totalOpens;
@@ -311,77 +263,31 @@ async function loadOverallSummary() {
     events24h = neonSummary.events24h;
     totalOpens = neonSummary.totalOpens;
   } else {
-    [totalEvents, events24h, totalOpens] = await Promise.all([
-      fetchSensorData('sensor.all_apps_total_events'),
-      fetchSensorData('sensor.all_apps_events_last_24h'),
-      fetchSensorData('sensor.all_apps_total_opens')
-    ]);
+    totalEvents = events24h = totalOpens = zero;
   }
 
-  if (totalEvents) {
-    document.getElementById('total-events').textContent = totalEvents.state || '0';
-  }
-  if (events24h) {
-    document.getElementById('events-24h').textContent = events24h.state || '0';
-  }
-  if (totalOpens) {
-    document.getElementById('total-opens').textContent = totalOpens.state || '0';
-  }
+  document.getElementById('total-events').textContent = totalEvents?.state || '0';
+  document.getElementById('events-24h').textContent = events24h?.state || '0';
+  document.getElementById('total-opens').textContent = totalOpens?.state || '0';
 
-  // Recent events: Neon first, then HA SQL sensor
   let events = [];
   const neonData = await fetchNeonData('recent-events', { limit: '15' });
 
   if (neonData && neonData.events && Array.isArray(neonData.events)) {
-      // Use Neon data - convert to expected format
-      events = neonData.events.map(event => ({
-        event_name: event.event_name,
-        timestamp: event.timestamp,
-        org: event.org,
-        app_name: event.app_name,
-        id: event.id, // Neon ID - should always be present
-        event_data: event.event_data // Full JSON data available!
-      }));
-      console.log('[loadOverallSummary] Using Neon data for recent events:', events.length);
-      // Debug: check if any events are missing id
-      const eventsWithoutId = events.filter(e => !e.id);
-      if (eventsWithoutId.length > 0) {
-        console.warn('[loadOverallSummary] Some events missing id:', eventsWithoutId.length, 'out of', events.length);
-        console.warn('[loadOverallSummary] Sample event without id:', eventsWithoutId[0]);
-      }
-    } else {
-    // Fallback to SQL sensor
-    const recentEvents = await fetchSensorData('sensor.all_apps_recent_events');
-    
-    // Parse events from attributes.events (JSON string) - state is "unknown" due to 255 char limit
-    if (recentEvents?.attributes?.events) {
-      const eventsData = recentEvents.attributes.events;
-      if (typeof eventsData === 'string') {
-        try {
-          events = JSON.parse(eventsData);
-        } catch (e) {
-          console.error('Failed to parse events JSON:', e);
-          events = [];
-        }
-      } else if (Array.isArray(eventsData)) {
-        events = eventsData;
-      }
-      
-      // SQL sensor events may have event_id instead of id - try to map it
-      // But note: SQL sensor events won't be clickable since they don't have Neon id
-      events = events.map(event => ({
-        ...event,
-        id: event.id || event.event_id || null // Try to use id, fallback to event_id, or null
-      }));
-      
-      console.warn('[loadOverallSummary] Using SQL sensor fallback - events may not have Neon id');
+    events = neonData.events.map(event => ({
+      event_name: event.event_name,
+      timestamp: event.timestamp,
+      org: event.org,
+      app_name: event.app_name,
+      id: event.id,
+      event_data: event.event_data,
+    }));
+    const eventsWithoutId = events.filter(e => !e.id);
+    if (eventsWithoutId.length > 0) {
+      console.warn('[loadOverallSummary] Some events missing id:', eventsWithoutId.length, 'out of', events.length);
     }
-    // Using SQL sensor data (Neon unavailable - fallback mode)
   }
-  
-  if (!Array.isArray(events)) {
-    events = [];
-  }
+
   renderRecentEvents(events);
 }
 
@@ -389,23 +295,20 @@ async function loadOverallSummary() {
 // Uses query batching: fetches all events in one query, then groups by app
 async function loadAppData() {
   // Step 1: Fetch all recent events in one batch query (enough for all apps)
-  // We fetch 200 events to ensure we have enough for all apps (13 apps * 15 events = 195 max)
   let allEvents = [];
   const neonData = await fetchNeonData('recent-events', { limit: '200' });
-  
+
   if (neonData && neonData.events && Array.isArray(neonData.events)) {
-    // Convert to expected format
     allEvents = neonData.events.map(event => ({
       event_name: event.event_name,
       timestamp: event.timestamp,
       org: event.org,
       app_name: event.app_name,
       id: event.id,
-      event_data: event.event_data
+      event_data: event.event_data,
     }));
   }
-  
-  // Step 2: Group events by app_name for efficient lookup
+
   const eventsByApp = {};
   allEvents.forEach(event => {
     const appName = event.app_name;
@@ -414,12 +317,11 @@ async function loadAppData() {
     }
     eventsByApp[appName].push(event);
   });
-  
-  // Step 3: Process each app (fetch stats + get recent events from grouped data)
+
+  const zero = { state: '0' };
   const promises = APPS.map(async (app) => {
-    // Use neonAppName if defined, otherwise convert app.id
     const appName = app.neonAppName || app.id.replace(/_/g, '-');
-    
+
     let totalEvents;
     let events24h;
     let totalOpens;
@@ -429,39 +331,12 @@ async function loadAppData() {
       events24h = neonStats.events24h;
       totalOpens = neonStats.totalOpens;
     } else {
-      [totalEvents, events24h, totalOpens] = await Promise.all([
-        fetchSensorData(`sensor.${app.id}_total_events`),
-        fetchSensorData(`sensor.${app.id}_events_last_24h`),
-        fetchSensorData(`sensor.${app.id}_total_opens`)
-      ]);
+      totalEvents = events24h = totalOpens = zero;
     }
 
-    // Get recent events from batched query (already grouped by app_name)
     let events = [];
     if (eventsByApp[appName] && Array.isArray(eventsByApp[appName])) {
-      // Take top 15 events for this app (already sorted by timestamp DESC from query)
       events = eventsByApp[appName].slice(0, 15);
-    } else {
-      // Fallback: if Neon query failed or app not found, try SQL sensor
-      const recentEvents = await fetchSensorData(`sensor.${app.id}_recent_events`);
-      
-      if (recentEvents?.attributes?.events) {
-        const eventsData = recentEvents.attributes.events;
-        if (typeof eventsData === 'string') {
-          try {
-            events = JSON.parse(eventsData);
-          } catch (e) {
-            console.error(`Failed to parse events JSON for ${app.id}:`, e);
-            events = [];
-          }
-        } else if (Array.isArray(eventsData)) {
-          events = eventsData;
-        }
-      }
-    }
-    
-    if (!Array.isArray(events)) {
-      events = [];
     }
 
     return {
@@ -471,7 +346,7 @@ async function loadAppData() {
       totalEvents: totalEvents?.state || '0',
       events24h: events24h?.state || '0',
       totalOpens: totalOpens?.state || '0',
-      recentEvents: events
+      recentEvents: events,
     };
   });
 
@@ -711,7 +586,9 @@ function getAppShortName(appName) {
     'todolist': 'Todo',
     'update-appt': 'Update Appt',
     'cycle-count': 'Cycle Import',
-    'cycle_count': 'Cycle Import'
+    'cycle_count': 'Cycle Import',
+    'dispatch': 'Dispatch',
+    'dispatch-request': 'Dispatch Req'
   };
   return mapping[appName] || appName;
 }

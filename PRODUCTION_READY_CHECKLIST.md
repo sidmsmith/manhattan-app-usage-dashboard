@@ -31,7 +31,7 @@
 ## 🔍 Recommended Before Production
 
 ### Security
-- [ ] Review environment variables (NEON_DATABASE_URL, HA_TOKEN)
+- [ ] Review environment variables (`NEON_DATABASE_URL`, usage-ingest secrets as applicable)
 - [ ] Ensure credentials are not hardcoded
 - [ ] Verify Vercel environment variables are set correctly
 - [ ] Check CORS settings if needed
