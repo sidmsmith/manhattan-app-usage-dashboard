@@ -1,57 +1,50 @@
-# Manhattan App Usage Dashboard
+# Manhattan App Usage Dashboard v2.4.3
 
-A standalone web dashboard for monitoring Manhattan Associates application usage, fetching data from Home Assistant.
+A standalone web dashboard for monitoring Manhattan Associates application usage from Neon PostgreSQL (and optional legacy Home Assistant SQL sensors).
 
 ## Overview
 
-This dashboard provides real-time visibility into app usage metrics across multiple Manhattan Associates applications. It displays aggregate statistics, recent events, and individual app performance metrics in a clean, responsive interface.
+This dashboard shows aggregate statistics, recent events, and per-app metrics. Primary data is stored in **Neon** via each app’s `MANHATTAN_USAGE_INGEST_URL` posting to the dashboard **usage-ingest** API.
 
 **Repository**: https://github.com/sidmsmith/manhattan-app-usage-dashboard.git  
 **Deployment**: Vercel (serverless functions)  
-**Data Sources**: 
-- Home Assistant API (SQL sensors from SQLite) - Summary statistics
-- Neon PostgreSQL (cloud database) - Full event data for dashboard
+**Data Sources**:
+- **Neon PostgreSQL** — primary store; apps POST to the dashboard `usage-ingest` API (`MANHATTAN_USAGE_INGEST_URL` on each app).
+- **Optional:** Home Assistant SQL sensors — legacy summary fallback if Neon is unavailable.
+
+### Tracked apps: canonical `app_name` and events
+
+`app_name` in Neon must match `neonAppName` in `app.js`. Representative `event_name` values:
+
+| App | `app_name` (Neon) | Events |
+|-----|-------------------|--------|
+| Item Generator | `item-generator-gallery` | `app_opened`, `auth_*`, `generate_items_*`, `gallery_generate_*`, `gallery_finalize_*`, `upload_cloudinary_*`, `update_wm_*` |
+| Driver Pickup | `driver-pickup` | `app_opened`, `auth_*`, `barcode_validation_*`, `barcode_scanned`, `barcode_scan_invalid`, `pickup_*` |
+
+Other apps follow the same pattern; see the `APPS` comment block at the top of `app.js`.
 
 ## Architecture
 
 ### Current Architecture (Neon PostgreSQL Integration)
 
 ```
-┌─────────────────┐
-│  Manhattan Apps  │
-│  (Python/JS)     │
-└────────┬─────────┘
-         │ POST /api/webhook/manhattan_app_usage
-         ▼
-┌─────────────────────────────────────┐
-│      Home Assistant                 │
-│  ┌───────────────────────────────┐ │
-│  │ Automation → Python Script    │ │
-│  │   ↓                            │ │
-│  │ HA Event Bus                   │ │
-│  │   ├─→ SQLite (default)        │ │
-│  │   │   └─→ SQL Sensors         │ │
-│  │   └─→ AppDaemon               │ │
-│  │       ├─→ MariaDB (local)     │ │
-│  │       └─→ Neon PostgreSQL      │ │
-│  └───────────────────────────────┘ │
-└────────┬───────────────────────────┘
-         │
-         ├─→ GET /api/states/{entity_id} (SQL Sensors)
-         │   └─→ Vercel: /api/fetch-sensor.js
-         │       └─→ Dashboard (summary statistics)
-         │
-         └─→ Neon PostgreSQL (cloud)
-             └─→ Vercel: /api/fetch-neon.js (to be created)
-                 └─→ Dashboard (full event data)
+┌──────────────────┐     MANHATTAN_USAGE_INGEST_URL      ┌─────────────────────┐
+│  Manhattan apps  │  ─────────────────────────────────►│ Vercel usage-ingest │
+│  (Flask / Node)  │         (JSON POST + optional secret)│  → Neon (JSONB)     │
+└──────────────────┘                                    └──────────┬──────────┘
+                                                                   │
+                                                          ┌────────▼─────────┐
+                                                          │ Dashboard (UI)   │
+                                                          │ fetch-neon API   │
+                                                          └──────────────────┘
+
+Optional legacy path: apps → Home Assistant webhook → SQL sensors (summary only).
 ```
 
 **Current Architecture:**
-- **SQL Sensors** (SQLite): Used for summary statistics (total events, 24h events, total opens)
-- **Neon PostgreSQL** (cloud): Primary database for dashboard - stores all events with full JSON data
-- **MariaDB** (local): Backup/legacy support - AppDaemon writes to both databases independently
-- **AppDaemon**: Listens for `app_usage_event` and writes to both MariaDB and Neon (dual-write)
-- **Fallback**: If Neon query fails, dashboard falls back to SQL sensors
+- **Neon PostgreSQL:** Primary database for the dashboard UI (full `event_data` JSONB).
+- **Usage ingest:** Each app forwards events server-side so `app_name` / `app_version` stay canonical.
+- **Optional SQL sensors (Home Assistant):** Summary fallback if Neon queries fail.
 
 ## Features
 
@@ -370,7 +363,9 @@ Then restart Home Assistant.
 
 ## Version History
 
-- **v1.0.0** (Current) - Baseline version with organized HA configuration
+- **v2.1.0** (Current) - "Modal Works" - Complete modal functionality with context-aware navigation
+- **v2.0.0** - "Fully works with Neon before Modal" - Neon PostgreSQL integration, performance optimizations
+- **v1.0.0** - Baseline version with organized HA configuration
   - All HA config files moved to `manhattan_dashboard/` folder
   - Cleaned up unused scripts and test files
   - Repository cleanup and organization

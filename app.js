@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.4.1';
+const DASHBOARD_VERSION = '2.4.3';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -29,6 +29,15 @@ if (typeof window.CONFIG === 'undefined') {
 
 // App definitions with display names
 // neonAppName: Maps dashboard app.id to actual app_name in Neon database
+//
+// Usage events (Neon ingest; each app sets MANHATTAN_USAGE_INGEST_URL on Vercel):
+// - item-generator-gallery: app_opened; auth_attempt | auth_success | auth_failed;
+//   generate_items_attempt | _failed | _completed; gallery_generate_* ; gallery_finalize_* ;
+//   upload_cloudinary_attempt | _completed | _failed; update_wm_attempt | _completed | _failed
+// - driver-pickup: app_opened; auth_attempt | auth_success | auth_failed;
+//   barcode_validation_attempt | barcode_validation_failed | barcode_validated;
+//   barcode_scanned | barcode_scan_invalid;
+//   pickup_confirmation_attempt | pickup_confirmation_failed | pickup_confirmed
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
@@ -38,7 +47,7 @@ const APPS = [
   { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍', neonAppName: 'facility-addresses' },
   { id: 'forecast_import', name: 'Import Forecast', icon: '📊', neonAppName: 'Import Forecast' },
   { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠', neonAppName: 'apps-homepage' },
-  { id: 'item_generator_gallery', name: 'Item Generator', icon: '🖼️', neonAppName: 'Item Generator' },
+  { id: 'item_generator_gallery', name: 'Item Generator', icon: '🖼️', neonAppName: 'item-generator-gallery' },
   { id: 'order_generator', name: 'Order Generator', icon: '📋', neonAppName: 'Order Generator' },
   { id: 'schedule_app', name: 'Schedule Appointment', icon: '📆', neonAppName: 'schedule-app' },
   { id: 'todolist', name: 'Todo List', icon: '✅', neonAppName: 'todolist' },
