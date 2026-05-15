@@ -1,4 +1,4 @@
-# Manhattan App Usage Dashboard v2.4.3
+# Manhattan App Usage Dashboard v2.4.4
 
 A standalone web dashboard for monitoring Manhattan Associates application usage from Neon PostgreSQL (and optional legacy Home Assistant SQL sensors).
 
@@ -20,6 +20,9 @@ This dashboard shows aggregate statistics, recent events, and per-app metrics. P
 |-----|-------------------|--------|
 | Item Generator | `item-generator-gallery` | `app_opened`, `auth_*`, `generate_items_*`, `gallery_generate_*`, `gallery_finalize_*`, `upload_cloudinary_*`, `update_wm_*` |
 | Driver Pickup | `driver-pickup` | `app_opened`, `auth_*`, `barcode_validation_*`, `barcode_scanned`, `barcode_scan_invalid`, `pickup_*` |
+| Order Generator | `order-generator-app` | `app_opened`, `auth_*`, `find_order_*`, `create_order_*`, `bulk_import_orders_*` |
+| Proof of Delivery | `proofofdelivery` | Same pickup/signature flow as Driver Pickup (`auth_*`, `barcode_*`, `pickup_*`) plus delivery-specific API actions (not all tracked as separate `event_name` yet) |
+| Work Order Update | `work-order-update` | `app_opened`, `auth_*`, `work_order_search_*`, `work_order_descriptions_*` |
 
 Other apps follow the same pattern; see the `APPS` comment block at the top of `app.js`.
 

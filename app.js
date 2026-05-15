@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.4.3';
+const DASHBOARD_VERSION = '2.4.4';
 
 // Configuration
 // For Vercel: environment variables are available via process.env
@@ -31,13 +31,13 @@ if (typeof window.CONFIG === 'undefined') {
 // neonAppName: Maps dashboard app.id to actual app_name in Neon database
 //
 // Usage events (Neon ingest; each app sets MANHATTAN_USAGE_INGEST_URL on Vercel):
-// - item-generator-gallery: app_opened; auth_attempt | auth_success | auth_failed;
-//   generate_items_attempt | _failed | _completed; gallery_generate_* ; gallery_finalize_* ;
-//   upload_cloudinary_attempt | _completed | _failed; update_wm_attempt | _completed | _failed
-// - driver-pickup: app_opened; auth_attempt | auth_success | auth_failed;
-//   barcode_validation_attempt | barcode_validation_failed | barcode_validated;
-//   barcode_scanned | barcode_scan_invalid;
-//   pickup_confirmation_attempt | pickup_confirmation_failed | pickup_confirmed
+// - item-generator-gallery: app_opened; auth_*; generate_items_*; gallery_generate_*; gallery_finalize_*;
+//   upload_cloudinary_*; update_wm_*
+// - driver-pickup: app_opened; auth_*; barcode_validation_*; barcode_scanned; barcode_scan_invalid; pickup_*
+// - order-generator-app: app_opened; auth_*; find_order_*; create_order_*; bulk_import_orders_*
+// - proofofdelivery: app_opened; auth_*; barcode_validation_*; barcode_scanned; barcode_scan_invalid;
+//   pickup_*; (delivery flow: search_olpns, deliver_olpn, condition codes, upload_pod_photo — track as needed later)
+// - work-order-update: app_opened; auth_*; work_order_search_*; work_order_descriptions_*
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
@@ -48,11 +48,13 @@ const APPS = [
   { id: 'forecast_import', name: 'Import Forecast', icon: '📊', neonAppName: 'Import Forecast' },
   { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠', neonAppName: 'apps-homepage' },
   { id: 'item_generator_gallery', name: 'Item Generator', icon: '🖼️', neonAppName: 'item-generator-gallery' },
-  { id: 'order_generator', name: 'Order Generator', icon: '📋', neonAppName: 'Order Generator' },
+  { id: 'order_generator', name: 'Order Generator', icon: '📋', neonAppName: 'order-generator-app' },
   { id: 'schedule_app', name: 'Schedule Appointment', icon: '📆', neonAppName: 'schedule-app' },
   { id: 'todolist', name: 'Todo List', icon: '✅', neonAppName: 'todolist' },
   { id: 'update_appt', name: 'Update Appointment', icon: '✏️', neonAppName: 'update-appt' },
   { id: 'cycle_count', name: 'Cycle Count Import', icon: '🔄', neonAppName: 'cycle-count' },
+  { id: 'proofofdelivery', name: 'Proof of Delivery', icon: '📬', neonAppName: 'proofofdelivery' },
+  { id: 'work_order_update', name: 'Work Order Update', icon: '🔧', neonAppName: 'work-order-update' },
 ];
 
 // State
@@ -595,9 +597,12 @@ function getAppShortName(appName) {
     'apps-homepage': 'Homepage',
     'item-generator-gallery': 'Item Gen',
     'Item Generator': 'Item Gen',
-    'order-generator': 'Order Gen',
     'order-generator-app': 'Order Gen',
+    'order-generator': 'Order Gen',
     'Order Generator': 'Order Gen',
+    'proofofdelivery': 'POD',
+    'proof-of-delivery': 'POD',
+    'work-order-update': 'WO Update',
     'schedule-app': 'Schedule',
     'todolist': 'Todo',
     'update-appt': 'Update Appt',
