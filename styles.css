@@ -539,6 +539,7 @@ body {
 .app-card[data-app="driver_pickup"] { border-color: #F44336; }
 .app-card[data-app="facility_addresses"] { border-color: #00BCD4; }
 .app-card[data-app="forecast_import"] { border-color: #FFC107; }
+.app-card[data-app="scp_store"] { border-color: #0097A7; }
 .app-card[data-app="apps_homepage"] { border-color: #795548; }
 .app-card[data-app="item_generator_gallery"] { border-color: #607D8B; }
 .app-card[data-app="order_generator"] { border-color: #E91E63; }
