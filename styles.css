@@ -542,6 +542,7 @@ body {
 .app-card[data-app="scp_store"] { border-color: #0097A7; }
 .app-card[data-app="apps_homepage"] { border-color: #795548; }
 .app-card[data-app="item_generator_gallery"] { border-color: #607D8B; }
+.app-card[data-app="item_generator"] { border-color: #009688; }
 .app-card[data-app="order_generator"] { border-color: #E91E63; }
 .app-card[data-app="schedule_app"] { border-color: #3F51B5; }
 .app-card[data-app="todolist"] { border-color: #009688; }

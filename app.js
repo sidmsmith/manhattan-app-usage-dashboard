@@ -19,6 +19,7 @@ if (typeof window.CONFIG === 'undefined') {
 // Usage events (Neon ingest; each app sets MANHATTAN_USAGE_INGEST_URL on Vercel):
 // - item-generator-gallery: app_opened; auth_*; generate_items_*; gallery_generate_*; gallery_finalize_*;
 //   upload_cloudinary_*; update_wm_*
+// - item-generator-app (Item Copy): app_opened; auth_*; find_item_*; create_item_*
 // - driver-pickup: app_opened; auth_*; barcode_validation_*; barcode_scanned; barcode_scan_invalid; pickup_*
 // - order-generator-app: app_opened; auth_*; find_order_*; create_order_*; bulk_import_orders_*
 // - proofofdelivery: app_opened; auth_*; barcode_validation_*; barcode_scanned; barcode_scan_invalid;
@@ -46,7 +47,8 @@ const APPS = [
   { id: 'forecast_import', name: 'Import Forecast', icon: '📊', neonAppName: 'forecast-import' },
   { id: 'scp_store', name: 'SCP Store', icon: '🏪', neonAppName: 'scp-store' },
   { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠', neonAppName: 'apps-homepage' },
-  { id: 'item_generator_gallery', name: 'Item Generator', icon: '🖼️', neonAppName: 'item-generator-gallery' },
+  { id: 'item_generator_gallery', name: 'Item Generator Gallery', icon: '🖼️', neonAppName: 'item-generator-gallery' },
+  { id: 'item_generator', name: 'Item Copy', icon: '📦', neonAppName: 'item-generator-app' },
   { id: 'order_generator', name: 'Order Generator', icon: '📋', neonAppName: 'order-generator-app' },
   { id: 'schedule_app', name: 'Schedule Appointment', icon: '📆', neonAppName: 'schedule-app' },
   { id: 'todolist', name: 'Todo List', icon: '✅', neonAppName: 'todolist' },
@@ -572,8 +574,10 @@ function getAppShortName(appName) {
     'scp-store': 'SCP Store',
     'scp_store': 'SCP Store',
     'apps-homepage': 'Homepage',
-    'item-generator-gallery': 'Item Gen',
-    'Item Generator': 'Item Gen',
+    'item-generator-gallery': 'Item Gallery',
+    'Item Generator Gallery': 'Item Gallery',
+    'item-generator-app': 'Item Copy',
+    'Item Copy': 'Item Copy',
     'order-generator-app': 'Order Gen',
     'order-generator': 'Order Gen',
     'Order Generator': 'Order Gen',
