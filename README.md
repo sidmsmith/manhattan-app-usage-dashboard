@@ -1,4 +1,4 @@
-# Manhattan App Usage Dashboard v2.5.0
+# Manhattan App Usage Dashboard v2.5.2
 
 A standalone web dashboard for monitoring Manhattan Associates application usage from **Neon PostgreSQL** only (via the dashboard `usage-ingest` API and `fetch-neon` serverless routes).
 
