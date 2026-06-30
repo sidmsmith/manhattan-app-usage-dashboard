@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.5.0';
+const DASHBOARD_VERSION = '2.5.1';
 
 // Optional config.js loads before this script if present (local overrides).
 const CONFIG = {
@@ -36,10 +36,12 @@ if (typeof window.CONFIG === 'undefined') {
 // - todolist: app_opened; auth_*; (todo CRUD events per frontend)
 // - dispatch: app_opened; auth_attempt; auth_success; auth_failed; dispatch_search_trips; dispatch_assign_trip
 // - dispatch-request: app_opened; auth_attempt; auth_success; auth_failed; dispatch_request_submit
+// - inspection: app_opened; auth_*; appointment search / check-in flow events (fork of check_in)
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
   { id: 'appt_app', name: 'Check In Kiosk', icon: '📅', neonAppName: 'appt-app' }, // check_in app sends app_name appt-app
+  { id: 'inspection', name: 'Inspection', icon: '🔍', neonAppName: 'inspection' },
   { id: 'pos_items', name: 'POS Items', icon: '📦', neonAppName: 'pos-items-app' },
   { id: 'item_update', name: 'Item Master Update', icon: '✏️', neonAppName: 'item-update' },
   { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚', neonAppName: 'driver-pickup' },
@@ -558,6 +560,7 @@ function getAppShortName(appName) {
     'appt-app': 'APPT',
     'appt_app': 'APPT',
     'check-in': 'APPT',
+    'inspection': 'Inspect',
     'POS Items': 'POS',
     'pos-items-app': 'POS',
     'item-update': 'Item Upd',

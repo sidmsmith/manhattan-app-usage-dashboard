@@ -535,6 +535,7 @@ body {
 .app-card[data-app="lpn_unlock_app"] { border-color: #2196F3; }
 .app-card[data-app="mhe_console"] { border-color: #FF9800; }
 .app-card[data-app="appt_app"] { border-color: #4CAF50; }
+.app-card[data-app="inspection"] { border-color: #7E57C2; }
 .app-card[data-app="pos_items"] { border-color: #9C27B0; }
 .app-card[data-app="driver_pickup"] { border-color: #F44336; }
 .app-card[data-app="facility_addresses"] { border-color: #00BCD4; }

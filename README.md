@@ -33,6 +33,7 @@ Historical Home Assistant / SQL sensor material may still exist under `manhattan
 | Item Master Update | `item-update` | `app_opened`, `auth_*`, `item_scanned` |
 | Todo List | `todolist` | `app_opened`, `auth_*` (todo CRUD per frontend) |
 | Check In Kiosk | `appt-app` | `app_opened`, `auth_*`, appointment search / check-in flow events |
+| Inspection | `inspection` | `app_opened`, `auth_*`, appointment search / check-in flow events |
 
 Other apps follow the same pattern; see the `APPS` comment block at the top of `app.js`.
 
