@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.5.2';
+const DASHBOARD_VERSION = '2.5.3';
 
 // Optional config.js loads before this script if present (local overrides).
 const CONFIG = {
@@ -36,6 +36,9 @@ if (typeof window.CONFIG === 'undefined') {
 // - todolist: app_opened; auth_*; (todo CRUD events per frontend)
 // - dispatch: app_opened; auth_attempt; auth_success; auth_failed; dispatch_search_trips; dispatch_assign_trip
 // - dispatch-request: app_opened; auth_attempt; auth_success; auth_failed; dispatch_request_submit
+// - flowthrough-app: app_opened; auth_attempt; auth_success; auth_failed;
+//   load_asn_attempt; load_asn_completed; load_asn_failed;
+//   create_orders_attempt; create_orders_completed; create_orders_failed
 // - inspection: app_opened; auth_*; appointment search / check-in flow events (fork of check_in)
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
@@ -47,6 +50,7 @@ const APPS = [
   { id: 'driver_pickup', name: 'Driver Pickup', icon: '🚚', neonAppName: 'driver-pickup' },
   { id: 'facility_addresses', name: 'Facility Addresses', icon: '📍', neonAppName: 'facility-addresses' },
   { id: 'forecast_import', name: 'Import Forecast', icon: '📊', neonAppName: 'forecast-import' },
+  { id: 'flowthrough', name: 'Flowthrough', icon: '🔀', neonAppName: 'flowthrough-app' },
   { id: 'scp_store', name: 'SCP Store', icon: '🏪', neonAppName: 'scp-store' },
   { id: 'apps_homepage', name: 'Apps Homepage', icon: '🏠', neonAppName: 'apps-homepage' },
   { id: 'item_generator_gallery', name: 'Item Generator Gallery', icon: '🖼️', neonAppName: 'item-generator-gallery' },
@@ -574,6 +578,8 @@ function getAppShortName(appName) {
     'forecast-import': 'Forecast',
     'forecast_import': 'Forecast',
     'Import Forecast': 'Forecast',
+    'flowthrough-app': 'Flowthrough',
+    'flowthrough': 'Flowthrough',
     'scp-store': 'SCP Store',
     'scp_store': 'SCP Store',
     'apps-homepage': 'Homepage',

@@ -22,6 +22,7 @@ Historical Home Assistant / SQL sensor material may still exist under `manhattan
 | Item Copy | `item-generator-app` | `app_opened`, `auth_*`, `find_item_*`, `create_item_*` |
 | Driver Pickup | `driver-pickup` | `app_opened`, `auth_*`, `barcode_validation_*`, `barcode_scanned`, `barcode_scan_invalid`, `pickup_*` |
 | Order Generator | `order-generator-app` | `app_opened`, `auth_*`, `find_order_*`, `create_order_*`, `bulk_import_orders_*` |
+| Flowthrough | `flowthrough-app` | `app_opened`, `auth_*`, `load_asn_*`, `create_orders_*` |
 | Proof of Delivery | `proofofdelivery` | Same pickup/signature flow as Driver Pickup (`auth_*`, `barcode_*`, `pickup_*`) plus delivery-specific API actions (not all tracked as separate `event_name` yet) |
 | Work Order Update | `work-order-update` | `app_opened`, `auth_*`, `work_order_search_*`, `work_order_descriptions_*` |
 | Import Forecast | `forecast-import` | `app_opened`, `auth_*`, `forecast_file_loaded`, `location_file_loaded`, `file_load_failed`, `upload_forecast_*`, `upload_locations_*` |
