@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.5.3';
+const DASHBOARD_VERSION = '2.6.0';
 
 // Optional config.js loads before this script if present (local overrides).
 const CONFIG = {
@@ -40,6 +40,12 @@ if (typeof window.CONFIG === 'undefined') {
 //   load_asn_attempt; load_asn_completed; load_asn_failed;
 //   create_orders_attempt; create_orders_completed; create_orders_failed
 // - inspection: app_opened; auth_*; appointment search / check-in flow events (fork of check_in)
+// - supplierenablement-app: app_opened; auth_success; auth_failed; create_asn_completed/_failed;
+//   create_lpns_completed/_failed; download_lpn_labels/_failed; schedule_appointment_completed/_failed
+// - receivingworkbench-app: app_opened; auth_success; auth_failed; load_asn_completed/_failed;
+//   receive_line_completed/_failed
+// - vasexecution: app_opened; auth_success; auth_failed; olpn_vas_lookup_success/_failed;
+//   assigned_services_failed; perform_vas_success/_failed
 const APPS = [
   { id: 'lpn_unlock_app', name: 'LPN Lock / Unlock', icon: '🔓', neonAppName: 'lpn-unlock-app' },
   { id: 'mhe_console', name: 'MHE Console', icon: '🖥️', neonAppName: 'mhe-console' },
@@ -65,6 +71,9 @@ const APPS = [
   { id: 'banding', name: 'Banding', icon: '📎', neonAppName: 'banding' },
   { id: 'dispatch', name: 'Dispatch', icon: '🛣️', neonAppName: 'dispatch' },
   { id: 'dispatch_request', name: 'Dispatch Request', icon: '📮', neonAppName: 'dispatch-request' },
+  { id: 'supplierenablement', name: 'Supplier Enablement', icon: '📥', neonAppName: 'supplierenablement-app' },
+  { id: 'receivingworkbench', name: 'Receiving Workbench', icon: '🚛', neonAppName: 'receivingworkbench-app' },
+  { id: 'vasexecution', name: 'VAS Execution', icon: '🏷️', neonAppName: 'vasexecution' },
 ];
 
 // State
@@ -601,7 +610,10 @@ function getAppShortName(appName) {
     'cycle-count': 'Cycle Import',
     'cycle_count': 'Cycle Import',
     'dispatch': 'Dispatch',
-    'dispatch-request': 'Dispatch Req'
+    'dispatch-request': 'Dispatch Req',
+    'supplierenablement-app': 'Supplier Enbl',
+    'receivingworkbench-app': 'Rcv Workbench',
+    'vasexecution': 'VAS Exec'
   };
   return mapping[appName] || appName;
 }

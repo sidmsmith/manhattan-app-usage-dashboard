@@ -35,6 +35,9 @@ Historical Home Assistant / SQL sensor material may still exist under `manhattan
 | Todo List | `todolist` | `app_opened`, `auth_*` (todo CRUD per frontend) |
 | Check In Kiosk | `appt-app` | `app_opened`, `auth_*`, appointment search / check-in flow events |
 | Inspection | `inspection` | `app_opened`, `auth_*`, appointment search / check-in flow events |
+| Supplier Enablement | `supplierenablement-app` | `app_opened`, `auth_success`, `auth_failed`, `create_asn_completed`/`_failed`, `create_lpns_completed`/`_failed`, `download_lpn_labels`/`_failed`, `schedule_appointment_completed`/`_failed` |
+| Receiving Workbench | `receivingworkbench-app` | `app_opened`, `auth_success`, `auth_failed`, `load_asn_completed`/`_failed`, `receive_line_completed`/`_failed` |
+| VAS Execution | `vasexecution` | `app_opened`, `auth_success`, `auth_failed`, `olpn_vas_lookup_success`/`_failed`, `assigned_services_failed`, `perform_vas_success`/`_failed` |
 
 Other apps follow the same pattern; see the `APPS` comment block at the top of `app.js`.
 
@@ -212,6 +215,7 @@ Only rows authored through Neon ingest include stable `id` values needed for `/a
 
 ## Version History
 
+- **v2.6.0** — Added Supplier Enablement, Receiving Workbench, and VAS Execution to the roster. Fixed a field-name mismatch in `supplierenablement`'s usage-ingest payloads (`app`/`version`/`event` → `app_name`/`app_version`/`event_name`) that had been silently landing all of its events under `app_name: "unknown"`. Wired usage tracking into `receivingworkbench` from scratch (it had none). `billingmgmt` (a ~20%-complete pet project) was moved to `Sandbox/` and intentionally left unregistered.
 - **v2.5.0** — Neon-only dashboard (`fetch-sensor` removed); added Dispatch apps to roster; HA fallbacks removed from `app.js`.
 - **v2.1.0** — "Modal Works" - Complete modal functionality with context-aware navigation
 - **v2.0.0** - "Fully works with Neon before Modal" - Neon PostgreSQL integration, performance optimizations

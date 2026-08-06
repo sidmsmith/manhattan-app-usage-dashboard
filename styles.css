@@ -556,3 +556,6 @@ body {
 .app-card[data-app="dispatch"] { border-color: #00838F; }
 .app-card[data-app="dispatch_request"] { border-color: #6D4C41; }
 .app-card[data-app="item_update"] { border-color: #8E24AA; }
+.app-card[data-app="supplierenablement"] { border-color: #43A047; }
+.app-card[data-app="receivingworkbench"] { border-color: #D84315; }
+.app-card[data-app="vasexecution"] { border-color: #3949AB; }
