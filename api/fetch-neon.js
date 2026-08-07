@@ -50,7 +50,7 @@ export default async function (req, res) {
 
   if (!query) {
     return res.status(400).json({
-      error: 'query parameter is required. Options: recent-events, recent-events-by-app, statistics, event-details, health'
+      error: 'query parameter is required. Options: recent-events, recent-events-by-app, statistics, statistics-by-app, event-details, health'
     });
   }
 
@@ -85,6 +85,10 @@ export default async function (req, res) {
         result = await queryStatistics(client, app_name);
         break;
 
+      case 'statistics-by-app':
+        result = await queryStatisticsByApp(client);
+        break;
+
       case 'event-details':
         if (!id) {
           return res.status(400).json({ error: 'id parameter required for event-details query' });
@@ -108,7 +112,7 @@ export default async function (req, res) {
 
       default:
         return res.status(400).json({
-          error: `Unknown query type: ${query}. Options: recent-events, recent-events-by-app, statistics, event-details, health`
+          error: `Unknown query type: ${query}. Options: recent-events, recent-events-by-app, statistics, statistics-by-app, event-details, health`
         });
     }
 
@@ -224,6 +228,23 @@ async function queryRecentEventsByApp(client, limitPerApp) {
     events: events,
     count: events.length
   };
+}
+
+// Query statistics for every app_name in one grouped query, instead of one
+// query per app.
+async function queryStatisticsByApp(client) {
+  const queryText = `
+    SELECT
+      app_name,
+      COUNT(*) AS total_events,
+      COUNT(CASE WHEN timestamp >= NOW() - INTERVAL '24 hours' THEN 1 END) AS events_last_24h,
+      COUNT(CASE WHEN event_name = 'app_opened' THEN 1 END) AS total_opens
+    FROM app_usage_events
+    GROUP BY app_name
+  `;
+
+  const result = await client.query(queryText);
+  return { stats: result.rows };
 }
 
 // Query statistics (total events, events last 24h, total opens)

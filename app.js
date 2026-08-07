@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.6.1';
+const DASHBOARD_VERSION = '2.6.2';
 
 // Optional config.js loads before this script if present (local overrides).
 const CONFIG = {
@@ -310,8 +310,9 @@ async function loadOverallSummary() {
 
 // Load data for all apps
 // Uses query batching: one ranked query returns each app's own most recent
-// events (via ROW_NUMBER() PARTITION BY app_name), so a low-volume app can't
-// get crowded out of its card by a chattier app filling a shared top-N window.
+// events (via ROW_NUMBER() PARTITION BY app_name), and one grouped query
+// returns every app's stats (via GROUP BY app_name) — so neither a
+// low-volume app's events nor the per-card stats need one round-trip each.
 async function loadAppData() {
   let allEvents = [];
   const neonData = await fetchNeonData('recent-events-by-app', { limit: '15' });
@@ -336,39 +337,35 @@ async function loadAppData() {
     eventsByApp[appName].push(event);
   });
 
+  const statsByApp = {};
+  const statsData = await fetchNeonData('statistics-by-app', {});
+  if (statsData && Array.isArray(statsData.stats)) {
+    statsData.stats.forEach(row => {
+      statsByApp[row.app_name] = row;
+    });
+  }
+
   const zero = { state: '0' };
-  const promises = APPS.map(async (app) => {
+  appData = {};
+  APPS.forEach((app) => {
     const appName = app.neonAppName || app.id.replace(/_/g, '-');
 
-    let totalEvents;
-    let events24h;
-    let totalOpens;
-    const neonStats = await fetchSummaryStatsFromNeon(appName);
-    if (neonStats) {
-      totalEvents = neonStats.totalEvents;
-      events24h = neonStats.events24h;
-      totalOpens = neonStats.totalOpens;
-    } else {
-      totalEvents = events24h = totalOpens = zero;
-    }
+    const stats = statsByApp[appName];
+    const totalEvents = stats ? { state: String(stats.total_events) } : zero;
+    const events24h = stats ? { state: String(stats.events_last_24h) } : zero;
+    const totalOpens = stats ? { state: String(stats.total_opens) } : zero;
 
     const events = eventsByApp[appName] || [];
 
-    return {
+    appData[app.id] = {
       id: app.id,
       name: app.name,
       icon: app.icon,
-      totalEvents: totalEvents?.state || '0',
-      events24h: events24h?.state || '0',
-      totalOpens: totalOpens?.state || '0',
+      totalEvents: totalEvents.state,
+      events24h: events24h.state,
+      totalOpens: totalOpens.state,
       recentEvents: events,
     };
-  });
-
-  const results = await Promise.all(promises);
-  appData = {};
-  results.forEach(app => {
-    appData[app.id] = app;
   });
 }
 
@@ -529,8 +526,8 @@ function createEventItem(event) {
   // Convert UTC to local time
   const { mmdd, time } = formatLocalTime(event.timestamp);
 
-  const appShort = getAppShortName(event.app_name);
-  const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const appShort = escapeHtml(getAppShortName(event.app_name));
+  const eventName = escapeHtml(event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
   const tail = formatEventOrgClickedTail(event);
 
   // Header card format: App (bold) || Event
@@ -780,7 +777,7 @@ function createAppEventItem(event) {
     div.classList.add('event-old');
   }
 
-  const eventName = event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const eventName = escapeHtml(event.event_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
   const tail = formatEventOrgClickedTail(event);
 
   div.innerHTML = `• <strong>${eventName}</strong> — ${mmdd} ${time} — ${tail}`;
@@ -948,8 +945,8 @@ function displayEventInModal(eventData) {
   // Build HTML
   let html = '<div class="modal-event-info">';
   html += `<div class="modal-event-info-item"><span class="modal-event-info-label">ID:</span> <span class="modal-event-info-value">${eventData.id || 'N/A'}</span></div>`;
-  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">App Name:</span> <span class="modal-event-info-value">${eventData.app_name || 'N/A'}</span></div>`;
-  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Event Name:</span> <span class="modal-event-info-value">${eventData.event_name || 'N/A'}</span></div>`;
+  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">App Name:</span> <span class="modal-event-info-value">${escapeHtml(eventData.app_name || 'N/A')}</span></div>`;
+  html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Event Name:</span> <span class="modal-event-info-value">${escapeHtml(eventData.event_name || 'N/A')}</span></div>`;
   const orgResolved = resolveDisplayOrg(eventData) || 'N/A';
   html += `<div class="modal-event-info-item"><span class="modal-event-info-label">Organization:</span> <span class="modal-event-info-value">${escapeHtml(orgResolved)}</span></div>`;
   const clickedResolved = resolveClickedAppNameForDisplay(eventData);
