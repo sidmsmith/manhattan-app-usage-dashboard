@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.6.2';
+const DASHBOARD_VERSION = '2.6.3';
 
 // Optional config.js loads before this script if present (local overrides).
 const CONFIG = {
