@@ -49,8 +49,8 @@ export default async function (req, res) {
   const { query, app_name, limit, id } = req.query;
 
   if (!query) {
-    return res.status(400).json({ 
-      error: 'query parameter is required. Options: recent-events, statistics, event-details, health' 
+    return res.status(400).json({
+      error: 'query parameter is required. Options: recent-events, recent-events-by-app, statistics, event-details, health'
     });
   }
 
@@ -75,6 +75,10 @@ export default async function (req, res) {
     switch (query) {
       case 'recent-events':
         result = await queryRecentEvents(client, app_name, parseInt(limit || '15'));
+        break;
+
+      case 'recent-events-by-app':
+        result = await queryRecentEventsByApp(client, parseInt(limit || '15'));
         break;
 
       case 'statistics':
@@ -103,8 +107,8 @@ export default async function (req, res) {
         break;
 
       default:
-        return res.status(400).json({ 
-          error: `Unknown query type: ${query}. Options: recent-events, statistics, event-details, health` 
+        return res.status(400).json({
+          error: `Unknown query type: ${query}. Options: recent-events, recent-events-by-app, statistics, event-details, health`
         });
     }
 
@@ -176,6 +180,43 @@ async function queryRecentEvents(client, app_name, limit) {
       }
     }
     // PostgreSQL JSONB is already an object, no parsing needed
+    return event;
+  });
+
+  return {
+    events: events,
+    count: events.length
+  };
+}
+
+// Query the N most recent events per app_name in one pass, via a ranking
+// window function, so a low-volume app can't be starved out of its own
+// card by a global "top N across all apps" cutoff.
+async function queryRecentEventsByApp(client, limitPerApp) {
+  const queryText = `
+    SELECT id, app_name, event_name, org, timestamp, event_data, created_at
+    FROM (
+      SELECT
+        id, app_name, event_name, org, timestamp, event_data, created_at,
+        ROW_NUMBER() OVER (PARTITION BY app_name ORDER BY timestamp DESC) AS rn
+      FROM app_usage_events
+    ) ranked
+    WHERE rn <= $1
+    ORDER BY app_name, timestamp DESC
+  `;
+
+  const result = await client.query(queryText, [limitPerApp]);
+  const rows = result.rows;
+
+  const events = rows.map(row => {
+    const event = { ...row };
+    if (typeof event.event_data === 'string') {
+      try {
+        event.event_data = JSON.parse(event.event_data);
+      } catch (e) {
+        // Keep as string if parsing fails
+      }
+    }
     return event;
   });
 

@@ -1,5 +1,5 @@
 // Dashboard Version - Update this with each push to main
-const DASHBOARD_VERSION = '2.6.0';
+const DASHBOARD_VERSION = '2.6.1';
 
 // Optional config.js loads before this script if present (local overrides).
 const CONFIG = {
@@ -309,11 +309,12 @@ async function loadOverallSummary() {
 }
 
 // Load data for all apps
-// Uses query batching: fetches all events in one query, then groups by app
+// Uses query batching: one ranked query returns each app's own most recent
+// events (via ROW_NUMBER() PARTITION BY app_name), so a low-volume app can't
+// get crowded out of its card by a chattier app filling a shared top-N window.
 async function loadAppData() {
-  // Step 1: Fetch all recent events in one batch query (enough for all apps)
   let allEvents = [];
-  const neonData = await fetchNeonData('recent-events', { limit: '200' });
+  const neonData = await fetchNeonData('recent-events-by-app', { limit: '15' });
 
   if (neonData && neonData.events && Array.isArray(neonData.events)) {
     allEvents = neonData.events.map(event => ({
@@ -351,10 +352,7 @@ async function loadAppData() {
       totalEvents = events24h = totalOpens = zero;
     }
 
-    let events = [];
-    if (eventsByApp[appName] && Array.isArray(eventsByApp[appName])) {
-      events = eventsByApp[appName].slice(0, 15);
-    }
+    const events = eventsByApp[appName] || [];
 
     return {
       id: app.id,
